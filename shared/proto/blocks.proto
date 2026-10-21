@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package barbershop.blocks;
+
+service BlocksService {
+  rpc ListBlocks(ListBlocksRequest) returns (ListBlocksResponse);
+  rpc CreateBlock(CreateBlockRequest) returns (CreateBlockResponse);
+  rpc DeleteBlock(DeleteBlockRequest) returns (DeleteBlockResponse);
+  rpc CheckBlockConflicts(CheckBlockConflictsRequest) returns (CheckBlockConflictsResponse);
+}
+
+message Block {
+  string id = 1;
+  string starts_at = 2;
+  string ends_at = 3;
+  string reason = 4;
+  string created_at = 5;
+  string updated_at = 6;
+}
+
+message ListBlocksRequest {
+  string month = 1; // YYYY-MM (optional)
+}
+message ListBlocksResponse {
+  repeated Block blocks = 1;
+}
+
+message CreateBlockRequest {
+  string starts_at = 1;
+  string ends_at = 2;
+  string reason = 3;
+}
+message CreateBlockResponse {
+  Block block = 1;
+}
+
+message DeleteBlockRequest {
+  string id = 1;
+}
+message DeleteBlockResponse {
+  bool success = 1;
+}
+
+message CheckBlockConflictsRequest {
+  string starts_at = 1;
+  string ends_at = 2;
+}
+message CheckBlockConflictsResponse {
+  bool has_conflict = 1;
+  repeated Block conflicting_blocks = 2;
+}

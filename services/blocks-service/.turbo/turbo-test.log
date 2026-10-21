@@ -1,0 +1,17 @@
+
+> @barbershop/blocks-service@1.0.0 test /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/blocks-service
+> vitest run
+
+
+ RUN  v2.1.9 /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/blocks-service
+
+ ✓ tests/unit/Block.test.ts (7 tests) 6ms
+ ✓ tests/unit/DeleteBlockUseCase.test.ts (3 tests) 17ms
+ ✓ tests/unit/CreateBlockUseCase.test.ts (9 tests) 28ms
+ ✓ tests/unit/ListBlocksUseCase.test.ts (5 tests) 9ms
+
+ Test Files  4 passed (4)
+      Tests  24 passed (24)
+   Start at  22:11:11
+   Duration  1.90s (transform 379ms, setup 0ms, collect 583ms, tests 60ms, environment 1ms, prepare 1.26s)
+

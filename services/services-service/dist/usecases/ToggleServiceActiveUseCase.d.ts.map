@@ -1,0 +1,1 @@
+{"version":3,"file":"ToggleServiceActiveUseCase.d.ts","sourceRoot":"","sources":["../../src/usecases/ToggleServiceActiveUseCase.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,kBAAkB,EAAE,MAAM,8CAA8C,CAAC;AAGlF,qBAAa,0BAA0B;IACzB,OAAO,CAAC,QAAQ,CAAC,iBAAiB;gBAAjB,iBAAiB,EAAE,kBAAkB;IAE5D,OAAO,CAAC,EAAE,EAAE,MAAM,EAAE,MAAM,EAAE,OAAO,GAAG,OAAO,CAAC,IAAI,CAAC;CAO1D"}

@@ -1,0 +1,15 @@
+
+> @barbershop/settings-service@1.0.0 test /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/settings-service
+> vitest run
+
+
+ RUN  v2.1.9 /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/settings-service
+
+ ✓ tests/unit/SettingsValidation.test.ts (26 tests) 21ms
+ ✓ tests/unit/SettingsRepository.test.ts (8 tests) 9ms
+
+ Test Files  2 passed (2)
+      Tests  34 passed (34)
+   Start at  22:11:11
+   Duration  1.77s (transform 261ms, setup 0ms, collect 319ms, tests 30ms, environment 1ms, prepare 1.11s)
+

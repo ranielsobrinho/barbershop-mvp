@@ -1,0 +1,8 @@
+
+> @barbershop/services-service@1.0.0 build /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/services-service
+> pnpm proto:generate && tsc
+
+
+> @barbershop/services-service@1.0.0 proto:generate /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/services-service
+> mkdir -p src/interfaces/grpc/generated && grpc_tools_node_protoc --proto_path=../../shared/proto --plugin=protoc-gen-ts_proto=$PWD/node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/interfaces/grpc/generated --ts_proto_opt=outputServices=grpc-js,esModuleInterop=true,env=node,importSuffix=.js services.proto
+

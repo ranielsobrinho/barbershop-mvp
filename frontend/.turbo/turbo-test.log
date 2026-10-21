@@ -1,0 +1,16 @@
+
+> @barbershop/frontend@1.0.0 test /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/frontend
+> vitest run
+
+
+ RUN  v2.1.9 /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/frontend
+
+ ✓ tests/unit/phone.test.ts (13 tests) 5ms
+ ✓ tests/unit/money.test.ts (5 tests) 15ms
+ ✓ tests/unit/date.test.ts (10 tests) 7ms
+
+ Test Files  3 passed (3)
+      Tests  28 passed (28)
+   Start at  22:11:17
+   Duration  610ms (transform 90ms, setup 0ms, collect 304ms, tests 27ms, environment 0ms, prepare 167ms)
+

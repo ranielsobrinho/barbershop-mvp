@@ -1,0 +1,767 @@
+{
+  "doc": {
+    "height": 4506,
+    "vh": 844,
+    "acts": [
+      "pin",
+      "flow",
+      "flow"
+    ],
+    "world": null
+  },
+  "report": [
+    {
+      "i": 0,
+      "y": 10,
+      "pct": 0,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.42,
+          "mean": 15.82
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.72,
+          "mean": 6.92
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        0,
+        1340
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 1,
+      "y": 80,
+      "pct": 2,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.49,
+          "mean": 15.82
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.72,
+          "mean": 6.94
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        0,
+        1270
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 2,
+      "y": 149,
+      "pct": 4,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.42,
+          "mean": 15.86
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.86,
+          "mean": 7
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        0,
+        1201
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 3,
+      "y": 218,
+      "pct": 6,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.67,
+          "mean": 15.95
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.88,
+          "mean": 7.03
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        0,
+        1132
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 4,
+      "y": 288,
+      "pct": 8,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.76,
+          "mean": 16.03
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.88,
+          "mean": 7.07
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        0,
+        1062
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 5,
+      "y": 357,
+      "pct": 10,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.67,
+          "mean": 16.11
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.88,
+          "mean": 7.1
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        0,
+        993
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 6,
+      "y": 426,
+      "pct": 12,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.67,
+          "mean": 16.17
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.88,
+          "mean": 7.11
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        0,
+        924
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 7,
+      "y": 496,
+      "pct": 14,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.67,
+          "mean": 16.19
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.88,
+          "mean": 7.11
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        0,
+        854
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 8,
+      "y": 553,
+      "pct": 15,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.67,
+          "mean": 16.19
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.88,
+          "mean": 7.11
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        -47,
+        797
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 9,
+      "y": 875,
+      "pct": 24,
+      "settled": true,
+      "contrast": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "dir": "light-on-dark",
+          "worst": 15.61,
+          "mean": 16.08
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Ag",
+          "dir": "light-on-dark",
+          "worst": 6.88,
+          "mean": 7.05
+        }
+      ],
+      "cues": [
+        {
+          "t": "Seu Carlos Barbearia",
+          "o": 1
+        },
+        {
+          "t": "Tradição no corte, estilo no detalhe. Agende e",
+          "o": 1
+        }
+      ],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "pin",
+      "stages": [
+        -369,
+        475
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(13,10,8)"
+    },
+    {
+      "i": 10,
+      "y": 1196,
+      "pct": 33,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -690,
+        154
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(16,12,9)"
+    },
+    {
+      "i": 11,
+      "y": 1518,
+      "pct": 41,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -1012,
+        -168
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(16,12,9)"
+    },
+    {
+      "i": 12,
+      "y": 1839,
+      "pct": 50,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -1333,
+        -489
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(16,12,9)"
+    },
+    {
+      "i": 13,
+      "y": 2056,
+      "pct": 56,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -1550,
+        -706
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(16,12,9)"
+    },
+    {
+      "i": 14,
+      "y": 2161,
+      "pct": 59,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -1655,
+        -811
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(16,12,9)"
+    },
+    {
+      "i": 15,
+      "y": 2399,
+      "pct": 66,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -1893,
+        -1049
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(16,12,9)"
+    },
+    {
+      "i": 16,
+      "y": 2482,
+      "pct": 68,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -1976,
+        -1132
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(16,12,9)"
+    },
+    {
+      "i": 17,
+      "y": 2742,
+      "pct": 75,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -2236,
+        -1392
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(16,12,9)"
+    },
+    {
+      "i": 18,
+      "y": 2804,
+      "pct": 77,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -2298,
+        -1454
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(16,12,9)"
+    },
+    {
+      "i": 19,
+      "y": 3085,
+      "pct": 84,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -2579,
+        -1735
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 20,
+      "y": 3428,
+      "pct": 94,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -2922,
+        -2078
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    },
+    {
+      "i": 21,
+      "y": 3662,
+      "pct": 100,
+      "settled": true,
+      "contrast": [],
+      "cues": [],
+      "clips": [],
+      "rails": [
+        0
+      ],
+      "wipes": [],
+      "act": "flow",
+      "stages": [
+        -3156,
+        -2312
+      ],
+      "segs": [],
+      "custom": [],
+      "customHold": false,
+      "seg": null,
+      "segp": null,
+      "bg": "rgb(11,9,8)"
+    }
+  ],
+  "consoleErrors": [
+    "Failed to load resource: the server responded with a status of 502 (Bad Gateway)",
+    "Failed to load resource: the server responded with a status of 502 (Bad Gateway)"
+  ],
+  "failed": []
+}

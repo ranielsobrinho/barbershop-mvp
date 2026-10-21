@@ -1,0 +1,675 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seu Carlos Barbearia · Tradição no corte, estilo no detalhe</title>
+<meta name="description" content="Agende seu corte ou barba na Seu Carlos Barbearia. Quatro passos, confirmação na hora.">
+<meta name="theme-color" content="#0B0908">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<meta name="api-base" content="">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='6' fill='%230B0908'/><text x='16' y='22' font-family='Georgia,serif' font-size='15' fill='%23CF6A28' text-anchor='middle'>SC</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="scrollcraft.css">
+<style>
+/* ---------------------------------------------------------------- tokens --
+   True off-black with warm tan. The brand names its amber (primary-600), so
+   the accent is earned, not the cream-and-brass default. ------------------ */
+:root {
+  --sc-canvas:     #0B0908;
+  --sc-surface:    #16110C;
+  --sc-ink:        #F2E9DD;
+  --sc-ink-soft:   #A9998A;
+  --sc-accent:     #CF6A28;
+  --sc-accent-ink: #140D08;
+  --sc-font-display: "Instrument Serif", Georgia, "Times New Roman", serif;
+  --sc-font-text:    "Geist", system-ui, -apple-system, sans-serif;
+
+  --paper:      #F3E7D3;
+  --paper-ink:  #2A1D14;
+  --paper-soft: #6B5747;
+  --paper-rule: #C9B79B;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; overflow-x: clip; }
+body { background: var(--sc-canvas); color: var(--sc-ink); overflow-x: clip; }
+img { max-width: 100%; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--sc-accent); outline-offset: 3px; }
+
+/* ---------------------------------------------------------------- chrome -- */
+#servicos, #agendar { scroll-margin-top: 4.5rem; }
+.site-bar {
+  position: fixed; inset: 0 0 auto 0; z-index: 70;
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: .85rem var(--sc-gutter);
+  background: color-mix(in oklab, var(--sc-canvas) 78%, transparent);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--sc-hairline);
+}
+.brand { display: inline-flex; align-items: baseline; gap: .55rem; color: var(--sc-ink); text-decoration: none; }
+.brand strong { font-family: var(--sc-font-display); font-weight: 400; font-size: 1.4rem; letter-spacing: -.01em; line-height: 1; white-space: nowrap; }
+.brand span { font-size: .58rem; letter-spacing: .26em; text-transform: uppercase; color: var(--sc-ink-soft); }
+.site-nav { display: flex; align-items: center; gap: clamp(.75rem, 2vw, 1.75rem); }
+.site-nav > a:not(.cta) { color: var(--sc-ink-soft); text-decoration: none; font-size: .86rem; letter-spacing: .01em; transition: color 160ms var(--sc-ease-out); }
+.site-nav > a:not(.cta):hover { color: var(--sc-ink); }
+.demo-tag { font-size: .56rem; letter-spacing: .16em; text-transform: uppercase; color: color-mix(in oklab, var(--sc-ink-soft) 85%, transparent); border: 1px solid var(--sc-hairline); padding: .22rem .5rem; border-radius: 999px; }
+
+.cta {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 2.75rem; padding: .7rem 1.25rem;
+  background: var(--sc-accent); color: var(--sc-accent-ink);
+  font-family: var(--sc-font-text); font-size: .9rem; font-weight: 600; letter-spacing: .01em;
+  text-decoration: none; border: 0; border-radius: 999px; cursor: pointer; white-space: nowrap;
+  box-shadow: var(--sc-e1), var(--sc-edge);
+  transition: transform 140ms var(--sc-ease-out), box-shadow 180ms var(--sc-ease-out), background-color 180ms var(--sc-ease-out);
+}
+.cta:hover { background: color-mix(in oklab, var(--sc-accent) 88%, white); box-shadow: var(--sc-e2); }
+.cta:active { transform: scale(.97); }
+.cta--lg { min-height: 3.25rem; padding: .9rem 1.7rem; font-size: .98rem; }
+.cta--ghost { background: transparent; color: var(--sc-ink); border: 1px solid var(--sc-hairline-strong); box-shadow: none; }
+.cta--ghost:hover { background: color-mix(in oklab, var(--sc-ink) 6%, transparent); }
+
+/* ------------------------------------------------------------------ hero -- */
+.hero {
+  position: relative; height: 100%;
+  display: grid; grid-template-columns: minmax(0, 1.04fr) minmax(0, .96fr);
+  align-items: center; gap: clamp(2rem, 4.5vw, 5rem);
+  padding: clamp(6.5rem, 13vh, 10rem) var(--sc-gutter) clamp(2.5rem, 6vh, 4.5rem);
+  z-index: 2;
+}
+.hero__glow {
+  position: absolute; inset: -10% -5% 0 -10%; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(58% 62% at 72% 26%, color-mix(in oklab, var(--sc-accent) 20%, transparent), transparent 70%),
+    radial-gradient(50% 50% at 12% 78%, color-mix(in oklab, var(--sc-ink) 5%, transparent), transparent 72%);
+}
+.hero__word {
+  position: absolute; right: -2%; bottom: -6%; z-index: 0; pointer-events: none;
+  font-family: var(--sc-font-display); font-size: clamp(9rem, 27vw, 26rem); line-height: .72;
+  color: color-mix(in oklab, var(--sc-ink) 4%, transparent); white-space: nowrap;
+  will-change: transform;
+}
+.hero__copy { position: relative; z-index: 3; max-width: 34rem; }
+.hero__title {
+  font-family: var(--sc-font-display); font-weight: 400;
+  font-size: clamp(3.2rem, 7.6vw, 7rem); line-height: .9; letter-spacing: -.02em;
+  margin: 0 0 1.35rem; text-wrap: balance;
+}
+.hero__title em { font-style: italic; color: color-mix(in oklab, var(--sc-ink) 80%, var(--sc-accent)); }
+.hero__lede { max-width: 30rem; margin: 0 0 2rem; color: var(--sc-ink-soft); font-size: clamp(1rem, 1.5vw, 1.16rem); line-height: 1.65; text-wrap: pretty; }
+.hero__actions { display: flex; align-items: center; gap: 1.1rem; flex-wrap: wrap; }
+.hero__note { font-size: .8rem; color: var(--sc-ink-soft); display: inline-flex; align-items: center; gap: .5rem; }
+.hero__note::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--sc-accent); }
+
+.hero__visual { position: relative; height: min(68svh, 36rem); z-index: 2; }
+.hero__plate {
+  position: absolute; inset: 3% 7% 5% 4%;
+  background:
+    linear-gradient(158deg, color-mix(in oklab, var(--sc-surface) 88%, var(--sc-accent) 12%), var(--sc-canvas) 78%);
+  border: 1px solid var(--sc-hairline);
+  box-shadow: var(--sc-e3), var(--sc-edge);
+  overflow: hidden;
+}
+.hero__plate::after {
+  content: "SC"; position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--sc-font-display); font-size: clamp(6rem, 15vw, 13rem);
+  color: color-mix(in oklab, var(--sc-ink) 7%, transparent);
+}
+.hero__img {
+  position: absolute; inset: 3% 7% 5% 4%; width: 86%; height: 92%; object-fit: cover;
+  filter: saturate(.8) contrast(1.06) brightness(.92); z-index: 1;
+}
+.hero__img::after { content: ""; }
+.hero__pole {
+  position: absolute; z-index: 3; border-radius: 999px; overflow: hidden;
+  background: repeating-linear-gradient(148deg,
+    #F2E9DD 0 11px, var(--sc-accent) 11px 22px, #1C140E 22px 33px);
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.4), var(--sc-e3);
+  will-change: transform;
+}
+.hero__pole::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(92deg, rgba(255,255,255,.32), transparent 34%, rgba(0,0,0,.42));
+}
+.hero__pole--back { width: clamp(2.4rem, 4.4vw, 3.6rem); height: 54%; right: 5%; top: 8%; opacity: .5; filter: blur(.4px); }
+.hero__pole--front { width: clamp(2.8rem, 5.2vw, 4.4rem); height: 66%; left: 7%; bottom: -3%; }
+.hero__seal {
+  position: absolute; right: 12%; bottom: 10%; z-index: 4;
+  width: clamp(3.4rem, 5vw, 4.6rem); aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center; border: 1px solid color-mix(in oklab, var(--sc-ink) 30%, transparent);
+  font-family: var(--sc-font-display); font-size: 1.15rem; color: var(--sc-ink-soft);
+  background: color-mix(in oklab, var(--sc-canvas) 70%, transparent);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+
+/* -------------------------------------------------------------- services -- */
+.svc-rail {
+  display: flex; align-items: center; gap: clamp(1rem, 2.2vw, 2rem);
+  height: 100%; padding: 0 var(--sc-gutter); width: max-content;
+  will-change: transform;
+}
+.svc-lead { flex: 0 0 auto; width: min(24rem, 74vw); padding-right: clamp(1rem, 3vw, 3rem); }
+.svc-lead h2 { margin: 0 0 1rem; }
+.svc-lead p { margin: 0; }
+.services-stage::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(60% 70% at 24% 50%, color-mix(in oklab, var(--sc-accent) 10%, transparent), transparent 70%);
+}
+.svc-rail { position: relative; z-index: 1; }
+.svc {
+  flex: 0 0 auto; width: clamp(17rem, 25vw, 22.5rem); min-height: clamp(21rem, 30vh, 25rem);
+  display: flex; flex-direction: column; gap: .9rem;
+  padding: clamp(1.35rem, 2.2vw, 1.9rem);
+  background: var(--sc-surface); border: 1px solid var(--sc-hairline);
+  border-radius: var(--sc-r-md); box-shadow: var(--sc-e1);
+  transition: transform 240ms var(--sc-ease-out), border-color 240ms var(--sc-ease-out), box-shadow 240ms var(--sc-ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .svc:hover { transform: translateY(-5px); border-color: color-mix(in oklab, var(--sc-accent) 55%, transparent); box-shadow: var(--sc-e2); }
+  .svc:hover .svc__pick { color: var(--sc-ink); }
+}
+.svc__no { font-size: .7rem; letter-spacing: .2em; color: var(--sc-ink-soft); font-variant-numeric: tabular-nums; }
+.svc__name { font-family: var(--sc-font-display); font-weight: 400; font-size: 1.75rem; line-height: 1.05; margin: 0; letter-spacing: -.01em; }
+.svc__desc { margin: 0; color: var(--sc-ink-soft); font-size: .92rem; line-height: 1.55; flex: 1; }
+.svc__meta { display: flex; align-items: baseline; justify-content: space-between; gap: .75rem; padding-top: .9rem; border-top: 1px solid var(--sc-hairline); }
+.svc__time { font-size: .8rem; color: var(--sc-ink-soft); }
+.svc__price { font-size: 1.12rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.svc__pick {
+  display: inline-flex; align-items: center; gap: .45rem; align-self: flex-start;
+  background: none; border: 0; padding: .25rem 0; cursor: pointer;
+  color: var(--sc-accent); font: inherit; font-size: .84rem; font-weight: 600; letter-spacing: .02em;
+  transition: color 160ms var(--sc-ease-out);
+}
+.svc__pick::after { content: "→"; transition: transform 180ms var(--sc-ease-out); }
+.svc__pick:active { transform: translateY(1px); }
+.svc-end {
+  flex: 0 0 auto; width: min(19rem, 70vw); display: flex; flex-direction: column; gap: 1.2rem;
+  padding-left: clamp(1rem, 3vw, 2.5rem); border-left: 1px solid var(--sc-hairline);
+}
+.svc-end p { margin: 0; color: var(--sc-ink-soft); font-size: .95rem; line-height: 1.6; }
+
+/* --------------------------------------------------------------- booking -- */
+.booking { position: relative; padding-bottom: 0; }
+.book-head { max-width: 40rem; margin-bottom: clamp(2rem, 5vw, 3.5rem); }
+.book-head h2 { margin: 0 0 1rem; }
+.book-head p { margin: 0; }
+.book-grid { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(1.25rem, 3.5vw, 2.75rem); align-items: start; }
+.apt-wrap { position: sticky; top: 6.5rem; order: 0; }
+
+/* The signature move: a physical appointment slip that inks itself row by row
+   and takes the barber's stamp when the booking is confirmed. */
+.apt-card {
+  position: relative; color: var(--paper-ink);
+  padding: clamp(1.25rem, 2.4vw, 1.75rem);
+  background:
+    radial-gradient(130% 110% at 12% 0%, rgba(255,255,255,.55), transparent 56%),
+    repeating-linear-gradient(0deg, rgba(60,40,20,.028) 0 1px, transparent 1px 4px),
+    var(--paper);
+  border: 1px solid rgba(70,48,26,.22);
+  box-shadow: 0 18px 40px -18px rgba(0,0,0,.65), 0 2px 6px rgba(0,0,0,.28);
+  transform: rotate(-.5deg);
+  transition: transform 400ms var(--sc-ease-out);
+}
+.apt-card::before, .apt-card::after {
+  content: ""; position: absolute; left: 0; right: 0; height: 7px;
+  background: radial-gradient(circle at 5px 0, transparent 4.5px, var(--paper) 5px) 0 0 / 10px 7px repeat-x;
+}
+.apt-card::before { top: -7px; transform: rotate(180deg); }
+.apt-card::after { bottom: -7px; }
+.apt-card__head { display: flex; align-items: flex-start; gap: .8rem; padding-bottom: .9rem; border-bottom: 1px dashed var(--paper-rule); }
+.apt-card__mark { flex: 0 0 auto; width: 2rem; height: 2rem; color: var(--sc-accent); }
+.apt-card__shop { margin: 0; font-family: var(--sc-font-display); font-size: 1.22rem; line-height: 1.05; }
+.apt-card__tag { margin: .2rem 0 0; font-size: .58rem; letter-spacing: .2em; text-transform: uppercase; color: var(--paper-soft); }
+.apt-card__no { margin-left: auto; font-size: .6rem; letter-spacing: .14em; color: var(--paper-soft); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.apt-card__body { padding: .35rem 0 .1rem; }
+.apt-row { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; padding: .62rem 0; border-bottom: 1px solid rgba(70,48,26,.12); }
+.apt-row:last-child { border-bottom: 0; }
+.apt-row__k { font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--paper-soft); }
+.apt-row__v { font-size: .95rem; font-weight: 500; text-align: right; letter-spacing: .02em; }
+.apt-row__v.is-empty { color: rgba(70,48,26,.35); font-weight: 400; }
+.apt-row__v.is-inked { animation: ink-in 460ms var(--sc-ease-out) both; }
+@keyframes ink-in {
+  0% { opacity: 0; filter: blur(3px); transform: translateY(4px); letter-spacing: .2em; }
+  60% { opacity: 1; filter: blur(0); }
+  100% { opacity: 1; filter: blur(0); transform: none; letter-spacing: .02em; }
+}
+.apt-card__foot { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin-top: .55rem; padding-top: .8rem; border-top: 2px solid rgba(70,48,26,.55); }
+.apt-card__foot span { font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--paper-soft); }
+.apt-card__foot strong { font-family: var(--sc-font-display); font-weight: 400; font-size: 1.5rem; font-variant-numeric: tabular-nums; }
+.apt-card__note { margin: .9rem 0 0; font-size: .66rem; line-height: 1.5; color: var(--paper-soft); }
+.apt-card__stamp {
+  position: absolute; inset: auto 0 auto 0; top: 46%;
+  display: grid; place-items: center; pointer-events: none;
+  opacity: 0; transform: rotate(-12deg) scale(1.55);
+  transition: opacity 320ms var(--sc-ease-out), transform 420ms var(--sc-ease-out);
+}
+.apt-card__stamp span {
+  display: block; padding: .45rem 1.1rem;
+  border: 3px double var(--sc-accent); border-radius: 4px;
+  color: var(--sc-accent); font-family: var(--sc-font-text); font-weight: 700;
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem); letter-spacing: .22em; text-transform: uppercase;
+  text-shadow: 0 0 0.6px currentColor;
+}
+.apt-card__stamp small { display: block; margin-top: .3rem; text-align: center; font-size: .58rem; letter-spacing: .18em; color: var(--sc-accent); text-transform: uppercase; }
+.apt-card.is-stamped { transform: rotate(-.5deg); }
+.apt-card.is-stamped .apt-card__stamp { opacity: .9; transform: rotate(-12deg) scale(1); }
+.apt-card.is-stamped .apt-card__body { opacity: .55; }
+
+/* stepper */
+.book {
+  background: var(--sc-surface); border: 1px solid var(--sc-hairline); border-radius: var(--sc-r-lg);
+  padding: clamp(1.25rem, 2.6vw, 2rem); box-shadow: var(--sc-e1), var(--sc-edge);
+}
+.book__steps { display: flex; gap: .3rem; margin: 0 0 1.35rem; padding: 0; list-style: none; }
+.book__steps li { flex: 1; height: 3px; border-radius: 999px; background: var(--sc-hairline-strong); transition: background-color 260ms var(--sc-ease-out); }
+.book__steps li.is-done { background: var(--sc-accent); }
+.book__step-title { margin: 0 0 1.1rem; font-family: var(--sc-font-display); font-weight: 400; font-size: 1.55rem; letter-spacing: -.01em; }
+.book__panel { animation: panel-in 320ms var(--sc-ease-out) both; }
+@keyframes panel-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.book__services { display: grid; gap: .55rem; }
+.svc-opt {
+  display: flex; align-items: center; gap: .85rem; width: 100%;
+  padding: .85rem .95rem; text-align: left; cursor: pointer;
+  background: color-mix(in oklab, var(--sc-canvas) 55%, transparent);
+  border: 1px solid var(--sc-hairline); border-radius: var(--sc-r-sm);
+  color: var(--sc-ink); font: inherit;
+  transition: border-color 160ms var(--sc-ease-out), background-color 160ms var(--sc-ease-out);
+}
+.svc-opt:hover { border-color: var(--sc-hairline-strong); background: color-mix(in oklab, var(--sc-canvas) 30%, transparent); }
+.svc-opt[aria-checked="true"] { border-color: var(--sc-accent); background: color-mix(in oklab, var(--sc-accent) 12%, transparent); }
+.svc-opt__dot { width: 1rem; height: 1rem; border-radius: 50%; border: 1.5px solid var(--sc-hairline-strong); flex: 0 0 auto; display: grid; place-items: center; }
+.svc-opt[aria-checked="true"] .svc-opt__dot { border-color: var(--sc-accent); }
+.svc-opt[aria-checked="true"] .svc-opt__dot::after { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: var(--sc-accent); }
+.svc-opt__body { flex: 1; min-width: 0; }
+.svc-opt__name { display: block; font-weight: 500; }
+.svc-opt__meta { display: block; font-size: .76rem; color: var(--sc-ink-soft); margin-top: .1rem; }
+.svc-opt__price { font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.cal__head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .9rem; }
+.cal__label { font-weight: 500; font-size: .95rem; }
+.cal__nav { width: 2.2rem; height: 2.2rem; display: grid; place-items: center; background: transparent; color: var(--sc-ink); border: 1px solid var(--sc-hairline); border-radius: var(--sc-r-sm); cursor: pointer; font-size: 1.1rem; line-height: 1; }
+.cal__nav:hover:not(:disabled) { border-color: var(--sc-hairline-strong); }
+.cal__nav:disabled { opacity: .3; cursor: not-allowed; }
+.cal__dow { display: grid; grid-template-columns: repeat(7, 1fr); gap: .25rem; margin-bottom: .3rem; }
+.cal__dow span { text-align: center; font-size: .62rem; letter-spacing: .1em; text-transform: uppercase; color: var(--sc-ink-soft); padding: .25rem 0; }
+.cal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: .25rem; }
+.cal__day {
+  aspect-ratio: 1; display: grid; place-items: center; cursor: pointer;
+  background: transparent; color: var(--sc-ink); border: 1px solid transparent; border-radius: var(--sc-r-sm);
+  font: inherit; font-size: .88rem; font-variant-numeric: tabular-nums;
+  transition: background-color 140ms var(--sc-ease-out), border-color 140ms var(--sc-ease-out), color 140ms var(--sc-ease-out);
+}
+.cal__day:hover:not(:disabled) { background: color-mix(in oklab, var(--sc-accent) 14%, transparent); border-color: color-mix(in oklab, var(--sc-accent) 40%, transparent); }
+.cal__day:disabled { color: color-mix(in oklab, var(--sc-ink-soft) 40%, transparent); cursor: not-allowed; }
+.cal__day.is-today { border-color: color-mix(in oklab, var(--sc-accent) 55%, transparent); }
+.cal__day.is-picked { background: var(--sc-accent); color: var(--sc-accent-ink); font-weight: 600; }
+
+.book__slots { display: grid; grid-template-columns: repeat(auto-fill, minmax(5.2rem, 1fr)); gap: .5rem; }
+.slot {
+  padding: .75rem .5rem; cursor: pointer; font: inherit; font-size: .9rem; font-variant-numeric: tabular-nums;
+  background: color-mix(in oklab, var(--sc-canvas) 55%, transparent);
+  border: 1px solid var(--sc-hairline); border-radius: var(--sc-r-sm); color: var(--sc-ink);
+  transition: border-color 140ms var(--sc-ease-out), background-color 140ms var(--sc-ease-out);
+}
+.slot:hover { border-color: var(--sc-accent); }
+.slot.is-picked { background: var(--sc-accent); color: var(--sc-accent-ink); border-color: var(--sc-accent); font-weight: 600; }
+.book__empty { color: var(--sc-ink-soft); font-size: .9rem; line-height: 1.6; padding: .5rem 0 1rem; }
+
+.book__back {
+  display: inline-flex; align-items: center; gap: .4rem; margin-top: 1.1rem; padding: .5rem 0;
+  background: none; border: 0; color: var(--sc-ink-soft); font: inherit; font-size: .84rem; cursor: pointer;
+}
+.book__back:hover { color: var(--sc-ink); }
+
+.field { display: block; margin-bottom: .95rem; }
+.field span { display: block; margin-bottom: .4rem; font-size: .64rem; letter-spacing: .18em; text-transform: uppercase; color: var(--sc-ink-soft); }
+.field input {
+  width: 100%; padding: .8rem .9rem; font: inherit; font-size: .95rem;
+  background: color-mix(in oklab, var(--sc-canvas) 55%, transparent);
+  color: var(--sc-ink); border: 1px solid var(--sc-hairline); border-radius: var(--sc-r-sm);
+  transition: border-color 160ms var(--sc-ease-out);
+}
+.field input::placeholder { color: color-mix(in oklab, var(--sc-ink-soft) 70%, transparent); }
+.field input:focus { outline: none; border-color: var(--sc-accent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--sc-accent) 22%, transparent); }
+.field__err { display: block; margin-top: .35rem; font-size: .76rem; color: #FF8A6A; }
+.lgpd { margin: .25rem 0 1.1rem; font-size: .72rem; line-height: 1.6; color: var(--sc-ink-soft); }
+.book__actions { display: flex; gap: .6rem; }
+.book__actions .cta { flex: 1; }
+.book__actions .cta--ghost { flex: 0 0 auto; }
+.form-error { margin: 0 0 .9rem; padding: .7rem .85rem; border-radius: var(--sc-r-sm); background: rgba(220,80,50,.14); border: 1px solid rgba(220,80,50,.4); color: #FFB4A0; font-size: .84rem; }
+
+.done { text-align: left; }
+.done__mark { width: 3rem; height: 3rem; display: grid; place-items: center; border-radius: 50%; background: color-mix(in oklab, var(--sc-accent) 18%, transparent); color: var(--sc-accent); margin-bottom: 1rem; }
+.done h3 { margin: 0 0 .5rem; font-family: var(--sc-font-display); font-weight: 400; font-size: clamp(1.8rem, 3vw, 2.3rem); }
+.done p { margin: 0 0 1.2rem; color: var(--sc-ink-soft); font-size: .92rem; line-height: 1.6; }
+.done__rows { display: grid; gap: .55rem; padding: 1rem 0; border-top: 1px solid var(--sc-hairline); border-bottom: 1px solid var(--sc-hairline); margin-bottom: 1.2rem; }
+.done__row { display: flex; justify-content: space-between; gap: 1rem; font-size: .88rem; }
+.done__row span { color: var(--sc-ink-soft); }
+.done__row strong { font-weight: 500; text-align: right; }
+
+/* ------------------------------------------------------------------ foot -- */
+.site-foot {
+  margin-top: clamp(4rem, 10vw, 8rem); padding: 2rem var(--sc-gutter);
+  border-top: 1px solid var(--sc-hairline);
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;
+  color: var(--sc-ink-soft); font-size: .78rem;
+}
+.site-foot strong { font-family: var(--sc-font-display); font-weight: 400; font-size: 1.05rem; color: var(--sc-ink); }
+.site-foot a { color: var(--sc-ink-soft); text-decoration: none; }
+.site-foot a:hover { color: var(--sc-ink); }
+
+
+/* quick answers: real questions, part of the commitment beat */
+.qa { margin-top: clamp(2.5rem, 6vw, 4rem); border-top: 1px solid var(--sc-hairline); }
+.qa__title { margin: 1.6rem 0 .4rem; font-family: var(--sc-font-display); font-weight: 400; font-size: clamp(1.6rem, 2.6vw, 2.1rem); letter-spacing: -.01em; }
+.qa__list { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 0 2.5rem; }
+.qa details { border-bottom: 1px solid var(--sc-hairline); }
+.qa summary {
+  display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+  padding: 1rem 0; cursor: pointer; list-style: none; font-size: .95rem; color: var(--sc-ink);
+}
+.qa summary::-webkit-details-marker { display: none; }
+.qa summary::after { content: "+"; color: var(--sc-accent); font-size: 1.1rem; line-height: 1; transition: transform 180ms var(--sc-ease-out); }
+.qa details[open] summary::after { transform: rotate(45deg); }
+.qa details p { margin: 0 0 1rem; color: var(--sc-ink-soft); font-size: .88rem; line-height: 1.65; max-width: 46ch; }
+
+/* ------------------------------------------------------------- responsive -- */
+@media (max-width: 1024px) {
+  .book-grid { grid-template-columns: 1fr; }
+  .apt-wrap { position: static; order: 2; max-width: 26rem; margin: 0 auto; }
+  .apt-card { transform: rotate(0); }
+}
+@media (max-width: 860px) {
+  /* Services: a continuous pan only shows ~1.3 cards at 390px, so the section
+     title and prices get clipped at every intermediate scroll position. Recompose
+     as a readable stack on phones; the desktop keeps the pan. */
+  #servicos .services-stage { position: static; height: auto; overflow: visible; padding: clamp(3rem, 8vh, 5rem) 0; }
+  #servicos .svc-rail { display: grid; grid-template-columns: 1fr; gap: 1rem; width: auto; height: auto; padding: 0 var(--sc-gutter); transform: none !important; will-change: auto; }
+  #servicos .svc-lead { width: auto; padding-right: 0; margin-bottom: 1.5rem; }
+  #servicos .svc { width: auto; min-height: 0; }
+  #servicos .svc-end { width: auto; }
+  .hero { grid-template-columns: 1fr; align-content: center; gap: 0; }
+  .hero__visual { position: absolute; inset: 0; height: auto; z-index: 1; opacity: .4; pointer-events: none; }
+  .hero__visual::after { content: ""; position: absolute; inset: 0; background: color-mix(in oklab, var(--sc-canvas) 38%, transparent); }
+  .hero__plate { inset: 7% -18% 58% 40%; }
+  .hero__img { inset: 7% -18% 58% 40%; width: 78%; height: 35%; }
+  .hero__pole { display: none; }
+  .hero__seal { display: none; }
+  .hero__copy { max-width: 100%; }
+  .hero__title { font-size: var(--sc-t-2xl); }
+  .hero__word { font-size: 42vw; bottom: 2%; }
+  .svc-lead { width: min(19rem, 78vw); }
+  .svc { width: min(17rem, 76vw); min-height: 19rem; }
+  .svc-end { width: min(16rem, 70vw); }
+  .site-nav > a:not(.cta):not(.nav-keep) { display: none; }
+}
+@media (max-width: 560px) {
+  .brand span { display: none; }
+  .brand strong { font-size: 1.25rem; }
+  .site-bar { padding-block: .7rem; }
+  .site-nav { gap: .6rem; }
+  .site-nav .nav-keep, .demo-tag { display: none; }
+  .site-nav .cta { min-height: 2.5rem; padding: .6rem 1rem; font-size: .82rem; }
+  .hero__title { font-size: clamp(2.15rem, 10.5vw, 2.9rem); }
+  .hero__actions { gap: .8rem; }
+  .hero__note { font-size: .76rem; }
+  .book { padding: 1.1rem; border-radius: var(--sc-r-md); }
+  .book__slots { grid-template-columns: repeat(3, 1fr); }
+  .site-foot { justify-content: center; text-align: center; }
+}
+
+/* --------------------------------------------------------- reduced motion -- */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .svc, .apt-card, .cta { transition: none; }
+  .apt-row__v.is-inked { animation: none; }
+  .book__panel { animation: none; }
+  .apt-card__stamp { transition: none; }
+}
+</style>
+</head>
+<body>
+
+<span data-sc-progress aria-hidden="true"></span>
+<div class="sc-grain" aria-hidden="true"></div>
+
+<header class="site-bar">
+  <a class="brand" href="#top" aria-label="Seu Carlos Barbearia, início">
+    <strong>Seu Carlos</strong><span>Barbearia</span>
+  </a>
+  <nav class="site-nav" aria-label="Principal">
+    <span class="demo-tag" id="demoTag" hidden>Modo demonstração</span>
+    <a href="#servicos">Serviços</a>
+    <a href="/app" class="nav-keep">Painel</a>
+    <a class="cta" href="#agendar">Agendar horário</a>
+  </nav>
+</header>
+
+<main id="top">
+
+  <!-- ACT 1 · RECOGNITION · pin + layered depth + kinetic -->
+  <section data-sc-act="pin" data-sc-span="2.2" data-sc-drift="#0B0908" aria-labelledby="heroTitle">
+    <div data-sc-stage class="hero-stage">
+      <div class="hero">
+        <div class="hero__glow" aria-hidden="true"></div>
+        <div class="hero__word" aria-hidden="true" data-sc-parallax="-0.55">Barbearia</div>
+
+        <div class="hero__copy">
+          <h1 class="hero__title" id="heroTitle" data-sc-cue="0 1 0 0" data-sc-kinetic="lines">Seu Carlos Barbearia</h1>
+          <p class="hero__lede" id="heroLede" data-sc-cue="0 1 0 0">Tradição no corte, estilo no detalhe. Agende em menos de um minuto, sem ligação e sem espera.</p>
+          <div class="hero__actions">
+            <a class="cta cta--lg" href="#agendar" data-sc-magnet="0.2">Agendar horário</a>
+            <span class="hero__note">Confirmação na hora</span>
+          </div>
+        </div>
+
+        <div class="hero__visual" aria-hidden="true">
+          <div class="hero__plate" data-sc-parallax="-0.3"></div>
+          <img class="hero__img" id="heroImg" alt="" hidden data-sc-parallax="-0.18" width="900" height="1100">
+          <div class="hero__pole hero__pole--back" data-sc-parallax="-0.42"></div>
+          <div class="hero__pole hero__pole--front" data-sc-parallax="0.22"></div>
+          <span class="hero__seal">SC</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACT 2 · SUBSTANCE · pan (lateral travel reads as options) -->
+  <section id="servicos" data-sc-act="pan" data-sc-span="3.2" data-sc-drift="#100C09" aria-labelledby="svcTitle">
+    <div data-sc-stage class="services-stage">
+      <div class="svc-rail" data-sc-pan="0.06">
+        <header class="svc-lead">
+          <h2 class="sc-display sc-display--lg" id="svcTitle">Nossos serviços</h2>
+          <p class="sc-body">Preço fixo, duração clara. Sem surpresa na cadeira.</p>
+        </header>
+
+        <div id="svcCards" style="display:contents"></div>
+
+        <aside class="svc-end">
+          <p>Em dúvida? O Corte + Barba é o mais pedido da casa.</p>
+          <a class="cta" href="#agendar">Agendar horário</a>
+        </aside>
+      </div>
+    </div>
+  </section>
+
+  <!-- ACT 3 · COMMITMENT · flow + the signature move (peak) -->
+  <section id="agendar" data-sc-act="flow" data-sc-drift="#0B0908" class="sc-section booking" aria-labelledby="bookTitle">
+    <div class="sc-wrap">
+      <div class="book-head" data-sc-in data-sc-stagger="60">
+        <h2 class="sc-display sc-display--lg" id="bookTitle">Agende seu horário</h2>
+        <p class="sc-body">Quatro passos. A ficha preenche sozinha enquanto você escolhe e sai carimbada no fim.</p>
+      </div>
+
+      <div class="book-grid">
+        <aside class="apt-wrap" data-sc-in data-sc-stagger="80" aria-label="Ficha do seu agendamento">
+          <div class="apt-card" id="aptCard" aria-live="off">
+            <div class="apt-card__head">
+              <svg class="apt-card__mark" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="7" cy="24" r="3.2"/><circle cx="25" cy="24" r="3.2"/>
+                <path d="M9.3 21.7L24 4M22.7 21.7L8 4"/>
+              </svg>
+              <div>
+                <p class="apt-card__shop">Seu Carlos Barbearia</p>
+                <p class="apt-card__tag">Ficha de agendamento</p>
+              </div>
+              <span class="apt-card__no">Nº <span id="cardNo">—</span></span>
+            </div>
+
+            <div class="apt-card__body">
+              <div class="apt-row"><span class="apt-row__k">Serviço</span><span class="apt-row__v is-empty" id="cardService" data-empty="A escolher">—</span></div>
+              <div class="apt-row"><span class="apt-row__k">Data</span><span class="apt-row__v is-empty" id="cardDate" data-empty="A escolher">—</span></div>
+              <div class="apt-row"><span class="apt-row__k">Horário</span><span class="apt-row__v is-empty" id="cardTime" data-empty="A escolher">—</span></div>
+              <div class="apt-row"><span class="apt-row__k">Cliente</span><span class="apt-row__v is-empty" id="cardClient" data-empty="Seu nome">—</span></div>
+            </div>
+
+            <div class="apt-card__foot">
+              <span>Total</span>
+              <strong id="cardTotal">—</strong>
+            </div>
+            <p class="apt-card__note">Apresente esta ficha ao chegar. Cancelamentos até 2 horas antes pelo WhatsApp da barbearia.</p>
+
+            <div class="apt-card__stamp" aria-hidden="true">
+              <div>
+                <span>Agendado</span>
+                <small id="stampDate"></small>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        <div class="book" data-sc-in data-sc-stagger="70" id="book">
+          <ol class="book__steps" aria-label="Progresso do agendamento">
+            <li class="is-done" data-stepdot="1"></li>
+            <li data-stepdot="2"></li>
+            <li data-stepdot="3"></li>
+            <li data-stepdot="4"></li>
+          </ol>
+
+          <section class="book__panel" data-panel="1" aria-labelledby="stepTitle1">
+            <h3 class="book__step-title" id="stepTitle1" tabindex="-1">Escolha o serviço</h3>
+            <div class="book__services" id="serviceOptions" role="radiogroup" aria-label="Serviços"></div>
+          </section>
+
+          <section class="book__panel" data-panel="2" hidden aria-labelledby="stepTitle2">
+            <h3 class="book__step-title" id="stepTitle2" tabindex="-1">Escolha a data</h3>
+            <div class="cal">
+              <div class="cal__head">
+                <button type="button" class="cal__nav" id="prevMonth" aria-label="Mês anterior">‹</button>
+                <span class="cal__label" id="monthLabel">—</span>
+                <button type="button" class="cal__nav" id="nextMonth" aria-label="Próximo mês">›</button>
+              </div>
+              <div class="cal__dow" aria-hidden="true">
+                <span>Dom</span><span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span>
+              </div>
+              <div class="cal__grid" id="calGrid" role="group" aria-label="Dias disponíveis"></div>
+            </div>
+            <button type="button" class="book__back" data-back="1">← Voltar</button>
+          </section>
+
+          <section class="book__panel" data-panel="3" hidden aria-labelledby="stepTitle3">
+            <h3 class="book__step-title" id="stepTitle3" tabindex="-1">Escolha o horário</h3>
+            <p class="book__empty" id="slotsFor">—</p>
+            <div class="book__slots" id="slotGrid" role="radiogroup" aria-label="Horários disponíveis"></div>
+            <p class="book__empty" id="slotEmpty" hidden>Nenhum horário livre neste dia. Escolha outra data.</p>
+            <button type="button" class="book__back" data-back="2">← Escolher outra data</button>
+          </section>
+
+          <section class="book__panel" data-panel="4" hidden aria-labelledby="stepTitle4">
+            <h3 class="book__step-title" id="stepTitle4" tabindex="-1">Seus dados</h3>
+            <form id="detailsForm" novalidate>
+              <p class="form-error" id="formError" hidden role="alert"></p>
+              <label class="field">
+                <span>Nome</span>
+                <input id="nameInput" name="name" autocomplete="name" placeholder="Seu nome completo" maxlength="80" required>
+              </label>
+              <label class="field">
+                <span>Telefone (WhatsApp)</span>
+                <input id="phoneInput" name="phone" inputmode="tel" autocomplete="tel" placeholder="(85) 99999-9999" required>
+              </label>
+              <div style="position:absolute;left:-9999px;opacity:0" aria-hidden="true">
+                <label>Website<input id="honeypot" name="website" tabindex="-1" autocomplete="off"></label>
+              </div>
+              <p class="lgpd">Seus dados (nome e telefone) são usados apenas para este agendamento. Retenção de 12 meses. Para exclusão, fale com a barbearia pelo WhatsApp.</p>
+              <div class="book__actions">
+                <button type="button" class="cta cta--ghost" data-back="3">← Voltar</button>
+                <button type="submit" class="cta" id="confirmBtn">Confirmar agendamento</button>
+              </div>
+            </form>
+          </section>
+
+          <section class="book__panel done" data-panel="5" hidden aria-labelledby="stepTitle5" aria-live="polite">
+            <div class="done__mark" aria-hidden="true">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+            </div>
+            <h3 id="stepTitle5" tabindex="-1">Agendado.</h3>
+            <p>Seu horário está reservado. Chegue com 5 minutos de antecedência. A ficha é o seu comprovante.</p>
+            <div class="done__rows">
+              <div class="done__row"><span>Serviço</span><strong id="doneService">—</strong></div>
+              <div class="done__row"><span>Data</span><strong id="doneDate">—</strong></div>
+              <div class="done__row"><span>Horário</span><strong id="doneTime">—</strong></div>
+              <div class="done__row"><span>Valor</span><strong id="doneTotal">—</strong></div>
+              <div class="done__row"><span>Status</span><strong>Aguardando confirmação</strong></div>
+            </div>
+            <button type="button" class="cta cta--ghost" id="newBooking">Fazer novo agendamento</button>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div class="sc-wrap">
+      <div class="qa" data-sc-in data-sc-stagger="50">
+        <h3 class="qa__title">Antes de vir</h3>
+        <div class="qa__list">
+          <details>
+            <summary>Preciso pagar algo agora?</summary>
+            <p>Não. Nada é cobrado online. O pagamento acontece na barbearia, ao final do atendimento.</p>
+          </details>
+          <details>
+            <summary>Meus dados ficam salvos?</summary>
+            <p>Apenas nome e telefone, por 12 meses, para este agendamento. A exclusão pode ser pedida pelo WhatsApp da barbearia.</p>
+          </details>
+          <details>
+            <summary>Como sei que o horário está reservado?</summary>
+            <p>A ficha carimbada nesta tela é o comprovante. O status fica como aguardando confirmação até a barbearia validar.</p>
+          </details>
+          <details>
+            <summary>Posso remarcar depois?</summary>
+            <p>Sim. Fale com a barbearia pelo WhatsApp; o painel permite mover o horário sem refazer o cadastro.</p>
+          </details>
+        </div>
+      </div>
+</div>
+
+    <footer class="site-foot">
+      <strong>Seu Carlos Barbearia</strong>
+      <span>Seg–Sex 9h–18h · Sáb 8h–14h · Fortaleza</span>
+      <span>© <span id="year">2026</span> · Todos os direitos reservados</span>
+      <a href="/app">Painel</a>
+    </footer>
+  </section>
+
+</main>
+
+<script>
+  (function () {
+    if (window.matchMedia('(max-width: 860px)').matches) {
+      var svc = document.getElementById('servicos');
+      if (svc) {
+        svc.setAttribute('data-sc-act', 'flow');
+        svc.removeAttribute('data-sc-span');
+      }
+      var hero = document.querySelector('[data-sc-act="pin"][data-sc-span]');
+      if (hero) hero.setAttribute('data-sc-span', '1.6');
+    }
+  })();
+</script>
+<script src="scrollcraft.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

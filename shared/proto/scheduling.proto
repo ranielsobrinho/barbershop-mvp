@@ -1,0 +1,102 @@
+syntax = "proto3";
+
+package barbershop.scheduling;
+
+import "services.proto";
+import "blocks.proto";
+import "business_hours.proto";
+
+service SchedulingService {
+  rpc GetAvailability(GetAvailabilityRequest) returns (GetAvailabilityResponse);
+  rpc GetBlockedDates(GetBlockedDatesRequest) returns (GetBlockedDatesResponse);
+  rpc CreateAppointment(CreateAppointmentRequest) returns (CreateAppointmentResponse);
+  rpc GetAppointmentsByMonth(GetAppointmentsByMonthRequest) returns (GetAppointmentsByMonthResponse);
+  rpc UpdateAppointmentStatus(UpdateAppointmentStatusRequest) returns (UpdateAppointmentStatusResponse);
+  rpc RescheduleAppointment(RescheduleAppointmentRequest) returns (RescheduleAppointmentResponse);
+  rpc CreateManualAppointment(CreateManualAppointmentRequest) returns (CreateManualAppointmentResponse);
+}
+
+message TimeSlot {
+  string start = 1;
+  string end = 2;
+}
+
+message Appointment {
+  string id = 1;
+  string service_id = 2;
+  string customer_name = 3;
+  string customer_phone = 4;
+  string starts_at = 5;
+  string ends_at = 6;
+  int32 price_cents = 7;
+  AppointmentStatus status = 8;
+  string previous_starts_at = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  barbershop.services.Service service = 12;
+}
+
+enum AppointmentStatus {
+  AGUARDANDO_CONFIRMACAO = 0;
+  CONFIRMADO = 1;
+  CANCELADO = 2;
+  REAGENDADO = 3;
+}
+
+message GetAvailabilityRequest {
+  string date = 1; // YYYY-MM-DD
+  string service_id = 2;
+}
+message GetAvailabilityResponse {
+  repeated TimeSlot slots = 1;
+}
+
+message GetBlockedDatesRequest {
+  string month = 1; // YYYY-MM
+}
+message GetBlockedDatesResponse {
+  repeated string dates = 1; // YYYY-MM-DD
+}
+
+message CreateAppointmentRequest {
+  string service_id = 1;
+  string customer_name = 2;
+  string customer_phone = 3;
+  string starts_at = 4; // ISO 8601
+}
+message CreateAppointmentResponse {
+  Appointment appointment = 1;
+}
+
+message GetAppointmentsByMonthRequest {
+  string month = 1; // YYYY-MM
+}
+message GetAppointmentsByMonthResponse {
+  repeated Appointment appointments = 1;
+}
+
+message UpdateAppointmentStatusRequest {
+  string id = 1;
+  AppointmentStatus status = 2;
+}
+message UpdateAppointmentStatusResponse {
+  Appointment appointment = 1;
+}
+
+message RescheduleAppointmentRequest {
+  string id = 1;
+  string new_starts_at = 2;
+}
+message RescheduleAppointmentResponse {
+  Appointment appointment = 1;
+}
+
+message CreateManualAppointmentRequest {
+  string service_id = 1;
+  string customer_name = 2;
+  string customer_phone = 3;
+  string starts_at = 4;
+}
+message CreateManualAppointmentResponse {
+  Appointment appointment = 1;
+}

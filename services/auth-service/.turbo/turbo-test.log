@@ -1,0 +1,16 @@
+
+> @barbershop/auth-service@1.0.0 test /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/auth-service
+> vitest run
+
+
+ RUN  v2.1.9 /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/auth-service
+
+ ✓ tests/unit/LoginUseCase.test.ts (3 tests) 1013ms
+   ✓ LoginUseCase > should login successfully with valid credentials 532ms
+   ✓ LoginUseCase > should throw InvalidCredentialsError for wrong password 478ms
+
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  22:11:11
+   Duration  2.95s (transform 167ms, setup 0ms, collect 288ms, tests 1.01s, environment 0ms, prepare 390ms)
+

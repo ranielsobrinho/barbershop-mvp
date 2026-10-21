@@ -1,0 +1,12 @@
+{
+  "name": "@barbershop/proto",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "scripts": {
+    "proto:generate": "mkdir -p ../types/generated && grpc_tools_node_protoc --proto_path=. --plugin=protoc-gen-ts_proto=$PWD/node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=../types/generated --ts_proto_opt=outputServices=grpc-js,esModuleInterop=true,env=node,importSuffix=.js *.proto"
+  },
+  "devDependencies": {
+    "grpc-tools": "^1.13.1",
+    "ts-proto": "^2.6.0"
+  }
+}

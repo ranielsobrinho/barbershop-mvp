@@ -1,0 +1,10 @@
+
+> @barbershop/scheduling-service@1.0.0 build /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/scheduling-service
+> pnpm proto:generate && tsc
+
+
+> @barbershop/scheduling-service@1.0.0 proto:generate /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/scheduling-service
+> mkdir -p src/interfaces/grpc/generated && grpc_tools_node_protoc --proto_path=../../shared/proto --plugin=protoc-gen-ts_proto=$PWD/node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/interfaces/grpc/generated --ts_proto_opt=outputServices=grpc-js,esModuleInterop=true,env=node,importSuffix=.js scheduling.proto services.proto blocks.proto business_hours.proto
+
+scheduling.proto:6:1: warning: Import blocks.proto is unused.
+scheduling.proto:7:1: warning: Import business_hours.proto is unused.

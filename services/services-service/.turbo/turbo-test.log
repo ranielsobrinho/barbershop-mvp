@@ -1,0 +1,20 @@
+
+> @barbershop/services-service@1.0.0 test /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/services-service
+> vitest run
+
+
+ RUN  v2.1.9 /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/services-service
+
+ ✓ tests/unit/GetServiceByIdUseCase.test.ts (3 tests) 20ms
+ ✓ tests/unit/UpdateServiceUseCase.test.ts (16 tests) 53ms
+ ✓ tests/unit/ToggleServiceActiveUseCase.test.ts (4 tests) 8ms
+ ✓ tests/unit/Service.test.ts (8 tests) 48ms
+ ✓ tests/unit/ListActiveServicesUseCase.test.ts (3 tests) 11ms
+ ✓ tests/unit/DeleteServiceUseCase.test.ts (4 tests) 8ms
+ ✓ tests/unit/CreateServiceUseCase.test.ts (11 tests) 42ms
+
+ Test Files  7 passed (7)
+      Tests  49 passed (49)
+   Start at  22:11:11
+   Duration  1.95s (transform 1.00s, setup 0ms, collect 1.36s, tests 190ms, environment 12ms, prepare 2.89s)
+

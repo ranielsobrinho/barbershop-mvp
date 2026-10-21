@@ -1,0 +1,17 @@
+
+> @barbershop/scheduling-service@1.0.0 test /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/scheduling-service
+> vitest run
+
+
+ RUN  v2.1.9 /home/ranielsobrinho/Desenvolvimento/projetos/barbershop-mvp/services/scheduling-service
+
+ ✓ tests/unit/SlotGenerator.test.ts (7 tests) 9ms
+ ✓ tests/unit/SchedulingRules.test.ts (15 tests) 66ms
+ ✓ tests/unit/ConflictChecker.test.ts (5 tests) 35ms
+ ✓ tests/unit/AvailabilityService.test.ts (23 tests) 26ms
+
+ Test Files  4 passed (4)
+      Tests  50 passed (50)
+   Start at  22:11:11
+   Duration  2.06s (transform 875ms, setup 0ms, collect 1.49s, tests 137ms, environment 7ms, prepare 2.22s)
+
