@@ -1,6 +1,7 @@
 import { ServerCredentials } from '@grpc/grpc-js';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
 import { env } from './infrastructure/config/env.js';
 import { prisma } from './infrastructure/database/prisma.js';
@@ -26,11 +27,13 @@ const app = Fastify({
   logger: {
     level: env.logLevel,
     transport: env.nodeEnv === 'development' ? {
-      target: 'pino-pretty',
-      options: { colorize: true }
+      target: '@mgcrea/pino-pretty-compact',
+      options: { translateTime: 'HH:MM:ss Z', ignore: 'pid,hostname' }
     } : undefined,
   },
 });
+
+await app.register(helmet);
 
 await app.register(cookie, {
   secret: process.env.COOKIE_SECRET || env.cookieSecret,
@@ -45,17 +48,8 @@ await app.register(rateLimit, {
 
 const authController = makeAuthController();
 
-// Register auth routes with stricter rate limit for login
-app.register(async (instance) => {
-  // Stricter rate limit for login: 5 requests per minute per IP
-  await instance.register(rateLimit, {
-    max: 5,
-    timeWindow: '1 minute',
-    keyGenerator: (req) => req.ip,
-  });
-  
-  await authRoutes(instance, authController);
-}, { prefix: '/api/auth' });
+// Auth routes define a stricter per-route limit for login.
+app.register(async (instance) => authRoutes(instance, authController), { prefix: '/api/auth' });
 
 const grpcCredentials = env.grpc.tls
   ? ServerCredentials.createSsl(

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Sistema de Agendamento - Seu Carlos Barbearia",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "pnpm landing:dev & turbo run dev",
     "build": "turbo run build",
     "start": "turbo run start",
     "test": "turbo run test",

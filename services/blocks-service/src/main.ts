@@ -1,5 +1,6 @@
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
+import helmet from '@fastify/helmet';
 import { env } from './infrastructure/config/env.js';
 import { prisma } from './infrastructure/database/prisma.js';
 import { publicRoutes, adminRoutes } from './interfaces/http/routes/blocksRoutes.js';
@@ -17,7 +18,18 @@ if (env.nodeEnv === 'production') {
   }
 }
 
-const app = Fastify({ logger: { level: env.logLevel } });
+const app = Fastify({
+  logger: {
+    level: env.logLevel,
+    transport: env.nodeEnv === 'development'
+      ? {
+          target: '@mgcrea/pino-pretty-compact',
+          options: { translateTime: 'HH:MM:ss Z', ignore: 'pid,hostname' },
+        }
+      : undefined,
+  },
+});
+await app.register(helmet);
 await app.register(cookie, { secret: process.env.COOKIE_SECRET || env.jwt.secret, hook: 'onRequest' });
 
 const controller = makeBlocksController();

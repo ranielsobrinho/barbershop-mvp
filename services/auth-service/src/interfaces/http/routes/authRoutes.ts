@@ -7,7 +7,11 @@ export async function authRoutes(
   authController: AuthController
 ): Promise<void> {
   // Public routes
-  app.post('/login', authController.login.bind(authController));
+  app.post(
+    '/login',
+    { config: { rateLimit: { max: 5, timeWindow: '1 minute' } } },
+    authController.login.bind(authController),
+  );
   app.post('/logout', authController.logout.bind(authController));
   
   // Protected routes

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,7 +10,7 @@ import { publicApi, Service, Appointment } from '../../services/publicApi';
 import { ServicesList } from './ServicesList';
 import { Spinner } from '../ui/Spinner';
 import { ErrorAlert } from '../ui/ErrorAlert';
-import { maskPhone, isValidPhone } from '../../utils/phone';
+import { maskPhone, isValidPhone, mapCursorPosition, createCursorCancellationToken, correctCursorPosition } from '../../utils/phone';
 import { formatMoney } from '../../utils/money';
 import {
   format, parseISO, startOfDay, isAfter, addMonths, subMonths,
@@ -28,6 +28,12 @@ interface Props {
   onConfirmed: (appointment: Appointment) => void;
 }
 
+interface PendingCursor {
+  rawValue: string;
+  rawCursorPos: number;
+  maskedValue: string;
+}
+
 export function BookingForm({ onConfirmed }: Props) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [serviceId, setServiceId] = useState<string | null>(null);
@@ -38,6 +44,16 @@ export function BookingForm({ onConfirmed }: Props) {
   const [honeypot, setHoneypot] = useState('');
 
   const queryClient = useQueryClient();
+
+  // Ref for phone input to preserve cursor position during masking
+  const phoneInputRef = useRef<HTMLInputElement>(null);
+  
+  // Refs para controle de cursor assíncrono
+  const pendingCursorRef = useRef<PendingCursor | null>(null);
+  const cursorTokenRef = useRef<ReturnType<typeof createCursorCancellationToken> | null>(null);
+  
+  // Ref to track previous raw value for cursor position calculation
+  const prevRawValueRef = useRef<string>('');
 
   const { data: services, isLoading: servicesLoading } = useServices();
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
@@ -58,7 +74,6 @@ export function BookingForm({ onConfirmed }: Props) {
 
   const isDayDisabled = (day: Date): boolean => {
     if (isSameDay(day, today) || isAfter(day, today)) {
-      // check blocked dates
       return blockedDates.includes(toDateString(day));
     }
     return true;
@@ -70,14 +85,72 @@ export function BookingForm({ onConfirmed }: Props) {
     setValue,
     watch,
     formState: { errors },
-  } = useForm<BookingForm>({ resolver: zodResolver(bookingSchema) });
+  } = useForm<BookingForm>({ resolver: zodResolver(bookingSchema), defaultValues: { customerName: '', customerPhone: '' } });
 
   const phoneValue = watch('customerPhone');
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const masked = maskPhone(e.target.value);
+    const rawValue = e.target.value;
+    const rawCursorPos = e.target.selectionStart ?? 0;
+
+    // Calculate correct cursor position based on previous raw value
+    // Uses correctCursorPosition utility to avoid flawed heuristic
+    const prevRawValue = prevRawValueRef.current;
+    const correctedCursorPos = correctCursorPosition(prevRawValue, rawValue, rawCursorPos);
+    
+    prevRawValueRef.current = rawValue;
+
+    const masked = maskPhone(rawValue);
     setValue('customerPhone', masked, { shouldValidate: true });
+
+    // Cancela qualquer restauração de cursor pendente
+    if (cursorTokenRef.current) {
+      cursorTokenRef.current.cancelled = true;
+    }
+    
+    // Cria novo token para esta mudança
+    const token = createCursorCancellationToken();
+    cursorTokenRef.current = token;
+
+    // Armazena rawValue, correctedCursorPos e maskedValue para uso no useLayoutEffect
+    pendingCursorRef.current = { rawValue, rawCursorPos: correctedCursorPos, maskedValue: masked };
   };
+
+  // useLayoutEffect para restaurar cursor sincronamente após o render
+  // Evita stale async cursor work e garante que o input está focado
+  useLayoutEffect(() => {
+    const pending = pendingCursorRef.current;
+    const token = cursorTokenRef.current;
+    const input = phoneInputRef.current;
+
+    if (!pending || !input || !token) return;
+
+    // Só restaura se o input ainda estiver focado (usuário está digitando)
+    if (document.activeElement !== input) {
+      pendingCursorRef.current = null;
+      return;
+    }
+
+    // Verifica se não foi cancelado por uma mudança posterior
+    if (token.cancelled) {
+      pendingCursorRef.current = null;
+      return;
+    }
+
+    // Calcula a posição correta do cursor na string mascarada
+    const { rawValue, rawCursorPos, maskedValue } = pending;
+    const newCursorPos = mapCursorPosition(rawValue, rawCursorPos, maskedValue);
+
+    // Clamp para range válido
+    const clampedPos = Math.min(Math.max(0, newCursorPos), maskedValue.length);
+    
+    // Só define se ainda focado e não cancelado
+    if (document.activeElement === input && !token.cancelled) {
+      input.setSelectionRange(clampedPos, clampedPos);
+    }
+
+    pendingCursorRef.current = null;
+  }, [phoneValue]); // Re-executa quando phoneValue muda (após setValue)
 
   const onSubmit = async (data: BookingForm) => {
     if (!serviceId || !selectedDate || !selectedTime) return;
@@ -232,7 +305,16 @@ export function BookingForm({ onConfirmed }: Props) {
             </div>
             <div>
               <label htmlFor="customerPhone" className="label">Telefone (WhatsApp) *</label>
-              <input id="customerPhone" value={phoneValue || ''} onChange={handlePhoneChange} className="input-field" placeholder="(11) 99999-9999" inputMode="tel" autoComplete="tel" />
+              <input 
+                id="customerPhone" 
+                ref={phoneInputRef} 
+                value={phoneValue || ''} 
+                onChange={handlePhoneChange} 
+                className="input-field" 
+                placeholder="(11) 99999-9999" 
+                inputMode="tel" 
+                autoComplete="tel" 
+              />
               {errors.customerPhone && <p className="text-red-600 text-xs mt-1">{errors.customerPhone.message}</p>}
             </div>
 
