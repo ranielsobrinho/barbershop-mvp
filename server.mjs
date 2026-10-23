@@ -3,7 +3,7 @@
  * Seu Carlos Barbearia · entry point (Option B)
  *
  *   /        static scroll-craft landing (this folder)
- *   /app     React admin SPA (frontend/dist; in --dev, proxied to Vite :5173)
+ *   /painel  React admin SPA (frontend/dist; in --dev, proxied to Vite :5173)
  *   /api     proxied to the Fastify gateway (:3000)
  *
  * Usage: node server.mjs [--port 8080] [--dev] [--gateway http://localhost:3000]
@@ -89,10 +89,22 @@ const server = http.createServer((req, res) => {
   // API gateway
   if (pathname === '/api' || pathname.startsWith('/api/')) return proxy(req, res, GATEWAY);
 
-  // React admin under /app
+  // Keep the previous admin URL working while directing users to /painel.
   if (pathname === '/app' || pathname.startsWith('/app/')) {
+    const panelPath = pathname === '/app' ? '/painel/' : `/painel${pathname.slice('/app'.length)}`;
+    res.writeHead(308, { location: `${panelPath}${url.search}` });
+    return res.end();
+  }
+
+  if (pathname === '/painel') {
+    res.writeHead(308, { location: `/painel/${url.search}` });
+    return res.end();
+  }
+
+  // React admin under /painel
+  if (pathname === '/painel' || pathname.startsWith('/painel/')) {
     if (DEV) return proxy(req, res, VITE);
-    let rest = pathname.slice('/app'.length) || '/';
+    let rest = pathname.slice('/painel'.length) || '/';
     if (rest.startsWith('/')) rest = rest.slice(1);
     const file = safeJoin(REACT, '/' + rest);
     if (file && rest && existsSync(file) && statSync(file).isFile()) return serveFile(res, file);
@@ -118,6 +130,6 @@ const server = http.createServer((req, res) => {
 server.listen(PORT, () => {
   console.log(`\n  Seu Carlos Barbearia`);
   console.log(`  landing   http://localhost:${PORT}/`);
-  console.log(`  painel    http://localhost:${PORT}/app  ${DEV ? '(proxy Vite :5173)' : '(frontend/dist)'}`);
+  console.log(`  painel    http://localhost:${PORT}/painel  ${DEV ? '(proxy Vite :5173)' : '(frontend/dist)'}`);
   console.log(`  api       /api -> ${GATEWAY.origin}\n`);
 });

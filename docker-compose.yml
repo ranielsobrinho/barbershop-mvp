@@ -1,218 +1,248 @@
+x-app: &app
+  image: barbershop-mvp:local
+  init: true
+
+x-backend-environment: &backend-environment
+  NODE_ENV: ${NODE_ENV:-development}
+  TZ: UTC
+  DATABASE_URL: postgresql://${POSTGRES_USER:-barbershop}:${POSTGRES_PASSWORD:-barbershop}@postgres:5432/${POSTGRES_DB:-barbershop}
+  JWT_SECRET: ${JWT_SECRET:-local-docker-jwt-secret-change-before-deploy-32-char}
+  COOKIE_SECRET: ${COOKIE_SECRET:-local-docker-cookie-secret-change-before-deploy}
+
+x-service-healthcheck: &service-healthcheck
+  test:
+    - CMD
+    - node
+    - -e
+    - const net=require('node:net');const s=net.connect(Number(process.env.PORT),'127.0.0.1');s.on('connect',()=>{s.end();process.exit(0)});s.on('error',()=>process.exit(1))
+  interval: 5s
+  timeout: 3s
+  retries: 20
+  start_period: 10s
+
 services:
   postgres:
     image: postgres:16-alpine
-    container_name: barbershop-postgres
     environment:
-      POSTGRES_USER: barbershop
-      POSTGRES_PASSWORD: barbershop
-      POSTGRES_DB: barbershop
+      POSTGRES_USER: ${POSTGRES_USER:-barbershop}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-barbershop}
+      POSTGRES_DB: ${POSTGRES_DB:-barbershop}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U barbershop -d barbershop"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 10
+      start_period: 5s
+    restart: unless-stopped
 
-  # API Gateway - Entry point for all external requests
-  api-gateway:
+  db-init:
+    <<: *app
     build:
-      context: ./services/api-gateway
+      context: .
       dockerfile: Dockerfile
-    container_name: barbershop-api-gateway
-    ports:
-      - "3000:3000"
     environment:
-      - NODE_ENV=development
-      - PORT=3000
-      - TZ=UTC
-      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-change-in-production}
-      - COOKIE_SECRET=${COOKIE_SECRET:-cookie-secret-change-in-production}
-      - AUTH_SERVICE_URL=http://auth-service:3001
-      - SCHEDULING_SERVICE_URL=http://scheduling-service:3002
-      - SERVICES_SERVICE_URL=http://services-service:3003
-      - BLOCKS_SERVICE_URL=http://blocks-service:3004
-      - BUSINESS_HOURS_SERVICE_URL=http://business-hours-service:3005
-      - SETTINGS_SERVICE_URL=http://settings-service:3006
+      <<: *backend-environment
+    command:
+      - sh
+      - -c
+      - pnpm --filter @barbershop/prisma db:migrate:deploy && pnpm --filter @barbershop/prisma db:seed
     depends_on:
-      - auth-service
-      - scheduling-service
-      - services-service
-      - blocks-service
-      - business-hours-service
-      - settings-service
-    volumes:
-      - ./services/api-gateway:/app
-      - /app/node_modules
+      postgres:
+        condition: service_healthy
+    restart: "no"
 
-  # Auth Service - Handles authentication and token validation
   auth-service:
-    build:
-      context: ./services/auth-service
-      dockerfile: Dockerfile
-    container_name: barbershop-auth-service
-    ports:
-      - "3001:3001"
+    <<: *app
+    command: ["pnpm", "--filter", "@barbershop/auth-service", "start"]
     environment:
-      - NODE_ENV=development
-      - PORT=3001
-      - GRPC_PORT=5001
-      - DATABASE_URL=postgresql://barbershop:barbershop@postgres:5432/barbershop
-      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-change-in-production}
-      - COOKIE_SECRET=${COOKIE_SECRET:-cookie-secret-change-in-production}
-      - JWT_EXPIRES_IN=7d
-      - TZ=UTC
+      <<: *backend-environment
+      PORT: "3001"
+      GRPC_PORT: "5001"
+    expose:
+      - "3001"
+      - "5001"
     depends_on:
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./services/auth-service:/app
-      - /app/node_modules
-      - ./shared:/shared
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      <<: *service-healthcheck
+    restart: unless-stopped
 
-  # Scheduling Service - Core booking logic, availability, conflicts
   scheduling-service:
-    build:
-      context: ./services/scheduling-service
-      dockerfile: Dockerfile
-    container_name: barbershop-scheduling-service
-    ports:
-      - "3002:3002"
+    <<: *app
+    command: ["pnpm", "--filter", "@barbershop/scheduling-service", "start"]
     environment:
-      - NODE_ENV=development
-      - PORT=3002
-      - GRPC_PORT=5002
-      - DATABASE_URL=postgresql://barbershop:barbershop@postgres:5432/barbershop
-      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-change-in-production}
-      - COOKIE_SECRET=${COOKIE_SECRET:-cookie-secret-change-in-production}
-      - AUTH_SERVICE_GRPC=auth-service:5001
-      - SERVICES_SERVICE_GRPC=services-service:5003
-      - BLOCKS_SERVICE_GRPC=blocks-service:5004
-      - BUSINESS_HOURS_SERVICE_GRPC=business-hours-service:5005
-      - TZ=UTC
+      <<: *backend-environment
+      PORT: "3002"
+      GRPC_PORT: "5002"
+      AUTH_SERVICE_GRPC: auth-service:5001
+      SERVICES_SERVICE_GRPC: services-service:5003
+      BLOCKS_SERVICE_GRPC: blocks-service:5004
+      BUSINESS_HOURS_SERVICE_GRPC: business-hours-service:5005
+    expose:
+      - "3002"
+      - "5002"
     depends_on:
-      postgres:
+      db-init:
+        condition: service_completed_successfully
+      auth-service:
         condition: service_healthy
-    volumes:
-      - ./services/scheduling-service:/app
-      - /app/node_modules
-      - ./shared:/shared
+      services-service:
+        condition: service_healthy
+      blocks-service:
+        condition: service_healthy
+      business-hours-service:
+        condition: service_healthy
+    healthcheck:
+      <<: *service-healthcheck
+    restart: unless-stopped
 
-  # Services Service - CRUD for services
   services-service:
-    build:
-      context: ./services/services-service
-      dockerfile: Dockerfile
-    container_name: barbershop-services-service
-    ports:
-      - "3003:3003"
+    <<: *app
+    command: ["pnpm", "--filter", "@barbershop/services-service", "start"]
     environment:
-      - NODE_ENV=development
-      - PORT=3003
-      - GRPC_PORT=5003
-      - DATABASE_URL=postgresql://barbershop:barbershop@postgres:5432/barbershop
-      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-change-in-production}
-      - COOKIE_SECRET=${COOKIE_SECRET:-cookie-secret-change-in-production}
-      - AUTH_SERVICE_GRPC=auth-service:5001
-      - TZ=UTC
+      <<: *backend-environment
+      PORT: "3003"
+      GRPC_PORT: "5003"
+      AUTH_SERVICE_GRPC: auth-service:5001
+    expose:
+      - "3003"
+      - "5003"
     depends_on:
-      postgres:
+      db-init:
+        condition: service_completed_successfully
+      auth-service:
         condition: service_healthy
-    volumes:
-      - ./services/services-service:/app
-      - /app/node_modules
-      - ./shared:/shared
+    healthcheck:
+      <<: *service-healthcheck
+    restart: unless-stopped
 
-  # Blocks Service - Day/time blocking
   blocks-service:
-    build:
-      context: ./services/blocks-service
-      dockerfile: Dockerfile
-    container_name: barbershop-blocks-service
-    ports:
-      - "3004:3004"
+    <<: *app
+    command: ["pnpm", "--filter", "@barbershop/blocks-service", "start"]
     environment:
-      - NODE_ENV=development
-      - PORT=3004
-      - GRPC_PORT=5004
-      - DATABASE_URL=postgresql://barbershop:barbershop@postgres:5432/barbershop
-      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-change-in-production}
-      - COOKIE_SECRET=${COOKIE_SECRET:-cookie-secret-change-in-production}
-      - AUTH_SERVICE_GRPC=auth-service:5001
-      - TZ=UTC
+      <<: *backend-environment
+      PORT: "3004"
+      AUTH_SERVICE_GRPC: auth-service:5001
+    expose:
+      - "3004"
     depends_on:
-      postgres:
+      db-init:
+        condition: service_completed_successfully
+      auth-service:
         condition: service_healthy
-    volumes:
-      - ./services/blocks-service:/app
-      - /app/node_modules
-      - ./shared:/shared
+    healthcheck:
+      <<: *service-healthcheck
+    restart: unless-stopped
 
-  # Business Hours Service - Weekly schedule
   business-hours-service:
-    build:
-      context: ./services/business-hours-service
-      dockerfile: Dockerfile
-    container_name: barbershop-business-hours-service
-    ports:
-      - "3005:3005"
+    <<: *app
+    command: ["pnpm", "--filter", "@barbershop/business-hours-service", "start"]
     environment:
-      - NODE_ENV=development
-      - PORT=3005
-      - GRPC_PORT=5005
-      - DATABASE_URL=postgresql://barbershop:barbershop@postgres:5432/barbershop
-      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-change-in-production}
-      - COOKIE_SECRET=${COOKIE_SECRET:-cookie-secret-change-in-production}
-      - AUTH_SERVICE_GRPC=auth-service:5001
-      - TZ=UTC
+      <<: *backend-environment
+      PORT: "3005"
+      AUTH_SERVICE_GRPC: auth-service:5001
+    expose:
+      - "3005"
     depends_on:
-      postgres:
+      db-init:
+        condition: service_completed_successfully
+      auth-service:
         condition: service_healthy
-    volumes:
-      - ./services/business-hours-service:/app
-      - /app/node_modules
-      - ./shared:/shared
+    healthcheck:
+      <<: *service-healthcheck
+    restart: unless-stopped
 
-  # Settings Service - General settings
   settings-service:
-    build:
-      context: ./services/settings-service
-      dockerfile: Dockerfile
-    container_name: barbershop-settings-service
-    ports:
-      - "3006:3006"
+    <<: *app
+    command: ["pnpm", "--filter", "@barbershop/settings-service", "start"]
     environment:
-      - NODE_ENV=development
-      - PORT=3006
-      - GRPC_PORT=5006
-      - DATABASE_URL=postgresql://barbershop:barbershop@postgres:5432/barbershop
-      - JWT_SECRET=${JWT_SECRET:-super-secret-jwt-key-change-in-production}
-      - COOKIE_SECRET=${COOKIE_SECRET:-cookie-secret-change-in-production}
-      - AUTH_SERVICE_GRPC=auth-service:5001
-      - TZ=UTC
+      <<: *backend-environment
+      PORT: "3006"
+      AUTH_SERVICE_GRPC: auth-service:5001
+    expose:
+      - "3006"
     depends_on:
-      postgres:
+      db-init:
+        condition: service_completed_successfully
+      auth-service:
         condition: service_healthy
-    volumes:
-      - ./services/settings-service:/app
-      - /app/node_modules
-      - ./shared:/shared
+    healthcheck:
+      <<: *service-healthcheck
+    restart: unless-stopped
 
-  # Frontend - Vite React app
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: barbershop-frontend
-    ports:
-      - "5173:5173"
+  api-gateway:
+    <<: *app
+    command: ["pnpm", "--filter", "@barbershop/api-gateway", "start"]
     environment:
-      - VITE_API_URL=http://localhost:3000
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
+      <<: *backend-environment
+      PORT: "3000"
+      AUTH_SERVICE_URL: http://auth-service:3001
+      SCHEDULING_SERVICE_URL: http://scheduling-service:3002
+      SERVICES_SERVICE_URL: http://services-service:3003
+      BLOCKS_SERVICE_URL: http://blocks-service:3004
+      BUSINESS_HOURS_SERVICE_URL: http://business-hours-service:3005
+      SETTINGS_SERVICE_URL: http://settings-service:3006
+      FRONTEND_URL: http://localhost:${LANDING_PORT:-8080}
+    ports:
+      - "${API_GATEWAY_PORT:-3000}:3000"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      scheduling-service:
+        condition: service_healthy
+      services-service:
+        condition: service_healthy
+      blocks-service:
+        condition: service_healthy
+      business-hours-service:
+        condition: service_healthy
+      settings-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+
+  frontend:
+    <<: *app
+    command: ["pnpm", "--filter", "@barbershop/frontend", "exec", "vite", "--host", "0.0.0.0", "--port", "5173"]
+    environment:
+      PORT: "5173"
+      API_PROXY_TARGET: http://api-gateway:3000
+    expose:
+      - "5173"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    healthcheck:
+      <<: *service-healthcheck
+    restart: unless-stopped
+
+  landing:
+    <<: *app
+    command: ["node", "server.mjs", "--dev", "--port", "8080", "--gateway", "http://api-gateway:3000", "--vite", "http://frontend:5173"]
+    environment:
+      PORT: "8080"
+      GATEWAY_URL: http://api-gateway:3000
+      VITE_DEV_URL: http://frontend:5173
+    ports:
+      - "${LANDING_PORT:-8080}:8080"
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    healthcheck:
+      <<: *service-healthcheck
+    restart: unless-stopped
 
 volumes:
   postgres_data:
