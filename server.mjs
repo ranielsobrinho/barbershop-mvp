@@ -89,6 +89,10 @@ const server = http.createServer((req, res) => {
   // API gateway
   if (pathname === '/api' || pathname.startsWith('/api/')) return proxy(req, res, GATEWAY);
 
+  if (pathname === '/meus-horarios' || pathname === '/meus-horarios/') {
+    return serveFile(res, join(LANDING, 'meus-horarios.html'));
+  }
+
   // Keep the previous admin URL working while directing users to /painel.
   if (pathname === '/app' || pathname.startsWith('/app/')) {
     const panelPath = pathname === '/app' ? '/painel/' : `/painel${pathname.slice('/app'.length)}`;

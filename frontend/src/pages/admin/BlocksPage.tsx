@@ -3,7 +3,9 @@ import { useBlocks, useCreateBlock, useDeleteBlock } from '../../hooks/useBlocks
 import { Spinner } from '../../components/ui/Spinner';
 import { ErrorAlert } from '../../components/ui/ErrorAlert';
 import { Modal } from '../../components/ui/Modal';
-import { format, parseISO, monthString, MONTHS, addMonths, subMonths, toDateString } from '../../utils/date';
+import { DateInput } from '../../components/ui/DateInput';
+import { format, parseISO, monthString, MONTHS, addMonths, subMonths, toDateString, getBusinessCalendarDate } from '../../utils/date';
+import { formatDateInput, parseDateInput } from '../../utils/dateInput';
 
 export function BlocksPage() {
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
@@ -23,7 +25,8 @@ export function BlocksPage() {
 
   const openModal = (m: 'day' | 'range' | 'hours') => {
     setMode(m); setError(null); setAffected(null); setReason('');
-    setDateFrom(toDateString(new Date())); setDateTo(toDateString(new Date()));
+    const today = formatDateInput(toDateString(getBusinessCalendarDate(new Date())));
+    setDateFrom(today); setDateTo(today);
     setTimeFrom('14:00'); setTimeTo('16:00');
   };
 
@@ -31,21 +34,28 @@ export function BlocksPage() {
     setError(null);
     setAffected(null);
     try {
+      const dateFromIso = parseDateInput(dateFrom);
+      const dateToIso = parseDateInput(dateTo || dateFrom);
+      if (!dateFromIso || !dateToIso) {
+        setError('Informe uma data válida no formato DD/MM/AAAA.');
+        return;
+      }
+
       // Offset explícito America/Fortaleza (UTC-3), independente do fuso do navegador
       let startsAt: string, endsAt: string;
-      if (mode === 'hours' && dateFrom) {
-        const s = new Date(`${dateFrom}T${timeFrom}:00-03:00`);
-        const e = new Date(`${dateFrom}T${timeTo}:00-03:00`);
+      if (mode === 'hours') {
+        const s = new Date(`${dateFromIso}T${timeFrom}:00-03:00`);
+        const e = new Date(`${dateFromIso}T${timeTo}:00-03:00`);
         if (e <= s) { setError('Horário final deve ser após o inicial'); return; }
         startsAt = s.toISOString(); endsAt = e.toISOString();
       } else if (mode === 'range') {
-        const s = new Date(`${dateFrom}T00:00:00-03:00`);
-        const e = new Date(`${dateTo || dateFrom}T23:59:59-03:00`);
-        if (e < s) { setError('Data final deve ser após a inicial'); return; }
+        if (dateToIso < dateFromIso) { setError('Data final deve ser após a inicial'); return; }
+        const s = new Date(`${dateFromIso}T00:00:00-03:00`);
+        const e = new Date(`${dateToIso}T23:59:59-03:00`);
         startsAt = s.toISOString(); endsAt = e.toISOString();
       } else {
-        const s = new Date(`${dateFrom}T00:00:00-03:00`);
-        const e = new Date(`${dateFrom}T23:59:59-03:00`);
+        const s = new Date(`${dateFromIso}T00:00:00-03:00`);
+        const e = new Date(`${dateFromIso}T23:59:59-03:00`);
         startsAt = s.toISOString(); endsAt = e.toISOString();
       }
 
@@ -146,7 +156,7 @@ export function BlocksPage() {
           {(mode === 'day' || mode === 'hours') && (
             <div>
               <label htmlFor="blk-date" className="label">Data</label>
-              <input id="blk-date" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="input-field" />
+              <DateInput id="blk-date" value={dateFrom} onChange={setDateFrom} />
             </div>
           )}
 
@@ -154,11 +164,11 @@ export function BlocksPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label htmlFor="blk-from" className="label">De</label>
-                <input id="blk-from" type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="input-field" />
+                <DateInput id="blk-from" value={dateFrom} onChange={setDateFrom} />
               </div>
               <div>
                 <label htmlFor="blk-to" className="label">Até</label>
-                <input id="blk-to" type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="input-field" />
+                <DateInput id="blk-to" value={dateTo} onChange={setDateTo} />
               </div>
             </div>
           )}

@@ -85,6 +85,19 @@
     if (results[1].status === 'fulfilled') services = results[1].value && results[1].value.services;
 
     if (settings) {
+      if (settings.companyName) {
+        var companyName = settings.companyName;
+        document.title = companyName + ' · Agendamento';
+        var description = document.querySelector('meta[name="description"]');
+        if (description) description.content = 'Agende seu horário na ' + companyName + ' de forma rápida e simples.';
+        var brand = sel('.brand');
+        if (brand) { brand.setAttribute('aria-label', companyName + ', início'); brand.textContent = companyName; }
+        ['heroTitle', 'aptShopName', 'footerCompanyName'].forEach(function (id) {
+          var el = $(id);
+          if (el) el.textContent = companyName;
+        });
+        all('.apt-card__shop').forEach(function (el) { el.textContent = companyName; });
+      }
       if (settings.heroText) {
         var lede = $('heroLede');
         if (lede) lede.textContent = settings.heroText;
@@ -365,6 +378,28 @@
   }
   function phoneDigits(v) { return String(v || '').replace(/\D/g, ''); }
 
+  function phoneCursorPosition(masked, digitsBeforeCursor, advanceSeparators) {
+    var maxDigits = phoneDigits(masked).length;
+    var target = Math.max(0, Math.min(digitsBeforeCursor, maxDigits));
+    if (!target) return 0;
+
+    var seen = 0;
+    var pos = 0;
+    while (pos < masked.length && seen < target) {
+      if (/\d/.test(masked.charAt(pos))) seen++;
+      pos++;
+    }
+
+    // After insertion, place the caret after punctuation the mask added at
+    // this boundary (for example ") " after the area code or "-" in the number).
+    // After deletion, stay before that punctuation so backspace can reach the
+    // previous digit instead of repeatedly deleting a separator the mask restores.
+    if (advanceSeparators) {
+      while (pos < masked.length && /\D/.test(masked.charAt(pos))) pos++;
+    }
+    return pos;
+  }
+
   /* ---------------------------------------------------------------- submit -- */
   async function submitBooking(ev) {
     ev.preventDefault();
@@ -513,10 +548,16 @@
     });
 
     var phoneInput = $('phoneInput');
-    if (phoneInput) phoneInput.addEventListener('input', function () {
-      var pos = phoneInput.selectionStart;
-      phoneInput.value = maskPhone(phoneInput.value);
-      try { phoneInput.setSelectionRange(pos, pos); } catch (e) {}
+    if (phoneInput) phoneInput.addEventListener('input', function (event) {
+      var rawValue = phoneInput.value;
+      var rawCursor = phoneInput.selectionStart;
+      var digitsBeforeCursor = phoneDigits(rawValue.slice(0, rawCursor == null ? rawValue.length : rawCursor)).length;
+      var masked = maskPhone(rawValue);
+      var isDeletion = String(event.inputType || '').indexOf('delete') === 0;
+      var cursor = phoneCursorPosition(masked, digitsBeforeCursor, !isDeletion);
+
+      phoneInput.value = masked;
+      try { phoneInput.setSelectionRange(cursor, cursor); } catch (e) {}
     });
 
     var nameInput = $('nameInput');

@@ -286,7 +286,7 @@ video[data-sc-scrub] { opacity: 0; transition: opacity 380ms var(--sc-ease-out);
 [data-sc-in], [data-sc-stagger] > * {
   opacity: 0;
   transform: translate3d(0, 14px, 0);
-  transition: opacity 620ms var(--sc-ease-out), transform 620ms var(--sc-ease-out);
+  transition: opacity 500ms var(--sc-ease-out), transform 500ms var(--sc-ease-out);
 }
 [data-sc-in].sc-in, [data-sc-stagger] > .sc-in { opacity: 1; transform: none; }
 

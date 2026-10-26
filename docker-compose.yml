@@ -79,6 +79,8 @@ services:
       <<: *backend-environment
       PORT: "3002"
       GRPC_PORT: "5002"
+      SETTINGS_SERVICE_URL: http://settings-service:3006
+      WHATSAPP_INTERNAL_SECRET: ${WHATSAPP_INTERNAL_SECRET:-}
       AUTH_SERVICE_GRPC: auth-service:5001
       SERVICES_SERVICE_GRPC: services-service:5003
       BLOCKS_SERVICE_GRPC: blocks-service:5004
@@ -163,6 +165,8 @@ services:
     environment:
       <<: *backend-environment
       PORT: "3006"
+      WHATSAPP_INTERNAL_SECRET: ${WHATSAPP_INTERNAL_SECRET:-}
+      WHATSAPP_ENCRYPTION_KEY: ${WHATSAPP_ENCRYPTION_KEY:-}
       AUTH_SERVICE_GRPC: auth-service:5001
     expose:
       - "3006"

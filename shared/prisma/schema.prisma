@@ -83,6 +83,7 @@ model Settings {
   id              String   @id @default(cuid())
   minNoticeHours  Int      @default(2)
   maxDaysAhead    Int      @default(60)
+  companyName     String   @default("Seu Carlos Barbearia")
   heroText        String?
   heroImageUrl    String?
   createdAt       DateTime @default(now())
@@ -96,4 +97,24 @@ enum AppointmentStatus {
   CONFIRMADO
   CANCELADO
   REAGENDADO
+}
+
+model WhatsAppIntegration {
+  id                String @id @default("default")
+  provider          WhatsAppProvider?
+  wameApiKey        String?
+  zapsterApiToken    String?
+  zapsterInstanceId  String?
+  messageAwaitingConfirmation String? @db.Text
+  messageConfirmed             String? @db.Text
+  messageCancelled              String? @db.Text
+  messageRescheduled            String? @db.Text
+  updatedAt         DateTime @updatedAt
+
+  @@map("whatsapp_integration")
+}
+
+enum WhatsAppProvider {
+  WAME
+  ZAPSTER
 }

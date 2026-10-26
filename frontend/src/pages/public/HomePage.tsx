@@ -43,7 +43,7 @@ export function HomePage() {
 
       {/* Rodapé */}
       <footer className="bg-gray-900 text-gray-400 py-8 text-center text-sm">
-        <p className="font-semibold text-white mb-1">Seu Carlos Barbearia</p>
+        <p className="font-semibold text-white mb-1">{settings?.companyName || 'Seu Carlos Barbearia'}</p>
         <p>© {new Date().getFullYear()} · Todos os direitos reservados</p>
       </footer>
     </div>

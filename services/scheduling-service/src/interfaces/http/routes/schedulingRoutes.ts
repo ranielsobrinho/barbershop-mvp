@@ -6,6 +6,7 @@ export async function publicRoutes(app: FastifyInstance, c: SchedulingController
   app.get('/api/availability', c.availability.bind(c));
   app.get('/api/blocked-dates', c.blockedDates.bind(c));
   app.post('/api/appointments', c.create.bind(c));
+  app.post('/api/appointments/lookup', c.lookupByPhone.bind(c));
 }
 
 export async function adminRoutes(app: FastifyInstance, c: SchedulingController): Promise<void> {

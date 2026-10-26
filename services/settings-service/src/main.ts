@@ -1,3 +1,4 @@
+import { whatsappRoutes } from './interfaces/http/routes/whatsappRoutes.js';
 import Fastify from 'fastify';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
@@ -34,6 +35,7 @@ await app.register(cookie, { secret: process.env.COOKIE_SECRET || env.jwt.secret
 const controller = makeSettingsController();
 await publicRoutes(app, controller);
 await adminRoutes(app, controller);
+await whatsappRoutes(app);
 app.get('/health', async () => ({ status: 'ok' }));
 
 try { await prisma.$queryRaw`SELECT 1`; } catch { app.log.error('DB fail'); process.exit(1); }

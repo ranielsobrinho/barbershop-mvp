@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { StatusBadge } from '../ui/Badge';
-import { formatTime, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, parseISO, MONTHS, WEEKDAYS_SHORT } from '../../utils/date';
+import { formatBusinessTime, getBusinessCalendarDate, getMonthGrid, getAppointmentsForDay, isDayBlocked, isSameDay, MONTHS, WEEKDAYS_SHORT } from '../../utils/date';
 import { STATUS_DOT } from '../../utils/constants';
 import type { Appointment } from '../../services/publicApi';
 import type { Block } from '../../services/adminApi';
@@ -9,29 +9,15 @@ interface Props {
   appointments: Appointment[];
   blocks: Block[];
   onAppointmentClick: (a: Appointment) => void;
+  currentMonth: Date;
 }
 
-export function MonthlyCalendar({ appointments, blocks, onAppointmentClick }: Props) {
-  const today = new Date();
+export function MonthlyCalendar({ appointments, blocks, onAppointmentClick, currentMonth }: Props) {
+  const today = getBusinessCalendarDate(new Date());
 
-  const days = useMemo(() => {
-    const start = startOfMonth(new Date());
-    const end = endOfMonth(new Date());
-    return eachDayOfInterval({ start, end });
-  }, []);
+  const { days, firstDayOffset } = useMemo(() => getMonthGrid(currentMonth), [currentMonth]);
 
-  const getDayAppointments = (day: Date) =>
-    appointments.filter((a) => isSameDay(parseISO(a.startsAt), day));
-
-  const isDayBlocked = (day: Date) =>
-    blocks.some((b) => {
-      const s = new Date(b.startsAt);
-      const e = new Date(b.endsAt);
-      return day >= new Date(s.getFullYear(), s.getMonth(), s.getDate()) &&
-             day <= new Date(e.getFullYear(), e.getMonth(), e.getDate());
-    });
-
-  const firstDayOffset = (days[0]?.getDay() || 0);
+  const getDayAppointments = (day: Date) => getAppointmentsForDay(day, appointments);
 
   return (
     <div>
@@ -44,7 +30,7 @@ export function MonthlyCalendar({ appointments, blocks, onAppointmentClick }: Pr
 
         {days.map((day) => {
           const dayAppts = getDayAppointments(day);
-          const blocked = isDayBlocked(day);
+          const blocked = isDayBlocked(day, blocks);
           const isToday = isSameDay(day, today);
 
           return (
@@ -72,7 +58,7 @@ export function MonthlyCalendar({ appointments, blocks, onAppointmentClick }: Pr
                     }`}
                   >
                     <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${STATUS_DOT[a.status] || 'bg-gray-400'}`} />
-                    <span className="font-medium">{formatTime(a.startsAt)}</span>
+                    <span className="font-medium">{formatBusinessTime(a.startsAt)}</span>
                     <span className="truncate hidden sm:inline">{a.customerName}</span>
                   </button>
                 ))}

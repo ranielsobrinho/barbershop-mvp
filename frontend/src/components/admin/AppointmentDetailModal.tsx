@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Modal } from '../ui/Modal';
+import { DateInput } from '../ui/DateInput';
 import { StatusBadge } from '../ui/Badge';
 import { useUpdateStatus, useReschedule } from '../../hooks/useAppointments';
 import { formatMoney } from '../../utils/money';
-import { formatFullDate, formatTime, toDateString } from '../../utils/date';
+import { formatBusinessFullDate, formatBusinessTime, getBusinessCalendarDate, toDateString } from '../../utils/date';
+import { parseDateInput } from '../../utils/dateInput';
 import { STATUS_LABELS } from '../../utils/constants';
 import type { Appointment } from '../../services/publicApi';
 
@@ -19,6 +21,8 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const newDateIso = parseDateInput(newDate);
+  const minDate = toDateString(getBusinessCalendarDate(new Date()));
 
   if (!appointment) return null;
 
@@ -38,10 +42,13 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
   };
 
   const handleReschedule = async () => {
-    if (!newDate || !newTime) return;
+    if (!newDateIso || !newTime || newDateIso < minDate) {
+      setError('Informe uma data válida a partir de hoje no formato DD/MM/AAAA e um horário.');
+      return;
+    }
     setError(null);
     try {
-      const d = new Date(`${newDate}T${newTime}:00-03:00`);
+      const d = new Date(`${newDateIso}T${newTime}:00-03:00`);
       await reschedule.mutateAsync({ id: appointment.id, newStartsAt: d.toISOString() });
       onClose();
     } catch (err: any) {
@@ -64,11 +71,11 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
           </div>
           <div className="flex justify-between">
             <span className="text-gray-500">Data</span>
-            <span className="font-medium">{formatFullDate(appointment.startsAt)}</span>
+            <span className="font-medium">{formatBusinessFullDate(appointment.startsAt)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-500">Horário</span>
-            <span className="font-medium">{formatTime(appointment.startsAt)} — {formatTime(appointment.endsAt)}</span>
+            <span className="font-medium">{formatBusinessTime(appointment.startsAt)} — {formatBusinessTime(appointment.endsAt)}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-500">Valor</span>
@@ -81,7 +88,7 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
           {appointment.previousStartsAt && (
             <div className="flex justify-between">
               <span className="text-gray-500">Horário anterior</span>
-              <span className="font-medium text-gray-400 line-through">{formatTime(appointment.previousStartsAt)}</span>
+              <span className="font-medium text-gray-400 line-through">{formatBusinessTime(appointment.previousStartsAt)}</span>
             </div>
           )}
         </div>
@@ -115,13 +122,19 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
             <div className="space-y-3">
               <p className="text-sm font-medium text-gray-700">Novo horário</p>
               <div className="grid grid-cols-2 gap-2">
-                <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)}
-                  min={toDateString(new Date())} className="input-field text-sm" aria-label="Nova data" />
+                <DateInput
+                  id="appointment-reschedule-date"
+                  value={newDate}
+                  onChange={setNewDate}
+                  className="input-field text-sm"
+                  minDate={minDate}
+                  aria-label="Nova data (DD/MM/AAAA)"
+                />
                 <input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} className="input-field text-sm" aria-label="Novo horário" />
               </div>
               <div className="flex gap-2">
                 <button onClick={() => setShowReschedule(false)} className="btn-secondary flex-1 text-sm">Cancelar</button>
-                <button onClick={handleReschedule} disabled={!newDate || !newTime || reschedule.isPending} className="btn-primary flex-1 text-sm">
+                <button onClick={handleReschedule} disabled={!newDateIso || newDateIso < minDate || !newTime || reschedule.isPending} className="btn-primary flex-1 text-sm">
                   {reschedule.isPending ? 'Salvando...' : 'Confirmar'}
                 </button>
               </div>

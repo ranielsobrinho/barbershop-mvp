@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B0908">
+  <title>Meus horários · Agendamento</title>
+  <style>
+    :root { color-scheme: dark; font-family: Geist, system-ui, sans-serif; background:#0b0908; color:#f2e9dd; }
+    * { box-sizing:border-box; }
+    body { margin:0; min-height:100vh; background:radial-gradient(ellipse at 50% 0,#2b1a10 0,transparent 55%),#0b0908; }
+    a { color:#e88b4d; }
+    header { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:1.25rem max(1.25rem,calc((100vw - 58rem)/2)); border-bottom:1px solid #ffffff20; }
+    header a { color:#f2e9dd; text-decoration:none; font-family:Georgia,serif; font-size:1.3rem; }
+    header a.back-link { border:1px solid #ffffff30; border-radius:.7rem; padding:.55rem .8rem; font:500 .9rem system-ui,sans-serif; white-space:nowrap; }
+    main { width:min(100% - 2rem,42rem); margin:clamp(3rem,9vh,6rem) auto; }
+    h1 { font:400 clamp(2.5rem,8vw,4.5rem)/1 Georgia,serif; letter-spacing:-.04em; margin:0 0 1rem; }
+    .intro { color:#b9a999; margin:0 0 2rem; }
+    form,.table-wrap { border:1px solid #ffffff20; border-radius:1rem; background:#17120eea; padding:1.25rem; }
+    label { display:block; font-size:.9rem; font-weight:600; margin-bottom:.6rem; }
+    .form-row { display:flex; gap:.7rem; }
+    input,button { min-height:3.15rem; border-radius:.7rem; font:inherit; }
+    input { flex:1; min-width:0; padding:0 .9rem; background:#0b0908; border:1px solid #ffffff30; color:#fff; }
+    input:focus { outline:2px solid #e88b4d; outline-offset:2px; }
+    button { padding:0 1.15rem; border:0; background:#cf6a28; color:#140d08; font-weight:700; cursor:pointer; }
+    button:disabled { opacity:.6; cursor:wait; }
+    #message { min-height:1.5rem; margin:1rem 0 0; color:#c9b9a9; }
+    #results { margin-top:1.2rem; }
+    .table-wrap { overflow-x:auto; padding:.35rem; }
+    table { width:100%; min-width:570px; border-collapse:collapse; text-align:left; }
+    th,td { padding:.9rem .75rem; border-bottom:1px solid #ffffff18; vertical-align:top; }
+    th { color:#b9a999; font-size:.78rem; font-weight:600; }
+    td { font-size:.9rem; }
+    tbody tr:last-child td { border-bottom:0; }
+    td small { display:block; color:#968879; margin-top:.2rem; }
+    footer { margin-top:2rem; color:#968879; font-size:.85rem; }
+    @media(max-width:520px) { .form-row { flex-direction:column; } button { width:100%; } }
+  </style>
+</head>
+<body>
+  <header>
+    <a id="brand" href="/">Seu Carlos Barbearia</a>
+    <a class="back-link" href="/" aria-label="Voltar para a página principal">← Página principal</a>
+  </header>
+  <main>
+    <h1>Seus horários</h1>
+    <p class="intro">Informe o telefone usado no agendamento para consultar seus horários.</p>
+    <form id="lookupForm">
+      <label for="phone">Telefone com DDD</label>
+      <div class="form-row">
+        <input id="phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(85) 99999-9999" required>
+        <button id="submit" type="submit">Consultar</button>
+      </div>
+      <p id="message" role="status" aria-live="polite"></p>
+    </form>
+    <section id="results" aria-label="Agendamentos encontrados"></section>
+    <footer>Não encontrou o horário? Confira se digitou o mesmo telefone usado ao agendar ou entre em contato com a empresa.</footer>
+  </main>
+  <script>
+    (function () {
+      var form = document.getElementById('lookupForm');
+      var phoneInput = document.getElementById('phone');
+      var submit = document.getElementById('submit');
+      var message = document.getElementById('message');
+      var results = document.getElementById('results');
+      var digits = function (value) { return value.replace(/\D/g, '').slice(0, 11); };
+      function mask(value) {
+        var d = digits(value);
+        if (d.length <= 2) return d ? '(' + d : '';
+        if (d.length <= 6) return '(' + d.slice(0, 2) + ') ' + d.slice(2);
+        if (d.length <= 10) return '(' + d.slice(0, 2) + ') ' + d.slice(2, 6) + '-' + d.slice(6);
+        return '(' + d.slice(0, 2) + ') ' + d.slice(2, 7) + '-' + d.slice(7);
+      }
+      phoneInput.addEventListener('input', function () { phoneInput.value = mask(phoneInput.value); });
+      function dateTime(value, options) {
+        return new Intl.DateTimeFormat('pt-BR', Object.assign({ timeZone: 'America/Fortaleza' }, options)).format(new Date(value));
+      }
+      function statusLabel(status) {
+        return ({ AGUARDANDO_CONFIRMACAO: 'Aguardando confirmação', CONFIRMADO: 'Confirmado', CANCELADO: 'Cancelado', REAGENDADO: 'Reagendado' })[status] || status;
+      }
+      function renderAppointments(appointments) {
+        var wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+        var table = document.createElement('table');
+        var caption = document.createElement('caption');
+        caption.textContent = 'Agendamentos encontrados';
+        caption.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0';
+        table.append(caption);
+        var thead = document.createElement('thead');
+        var headerRow = document.createElement('tr');
+        ['Data e horário', 'Serviço', 'Valor', 'Status'].forEach(function (label) {
+          var th = document.createElement('th');
+          th.scope = 'col';
+          th.textContent = label;
+          headerRow.append(th);
+        });
+        thead.append(headerRow);
+        var tbody = document.createElement('tbody');
+        appointments.forEach(function (item) {
+          var row = document.createElement('tr');
+          var dateCell = document.createElement('td');
+          dateCell.textContent = dateTime(item.startsAt, { dateStyle: 'medium' }) + ' · ' + dateTime(item.startsAt, { timeStyle: 'short' });
+          if (item.previousStartsAt) {
+            var previous = document.createElement('small');
+            previous.textContent = 'Antes: ' + dateTime(item.previousStartsAt, { dateStyle: 'short', timeStyle: 'short' });
+            dateCell.append(previous);
+          }
+          var serviceCell = document.createElement('td');
+          serviceCell.textContent = item.serviceName;
+          var priceCell = document.createElement('td');
+          priceCell.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.priceCents / 100);
+          var statusCell = document.createElement('td');
+          statusCell.textContent = statusLabel(item.status);
+          row.append(dateCell, serviceCell, priceCell, statusCell);
+          tbody.append(row);
+        });
+        table.append(thead, tbody);
+        wrap.append(table);
+        results.replaceChildren(wrap);
+      }
+      fetch('/api/settings').then(function (res) { return res.json(); }).then(function (data) {
+        var company = data.settings && data.settings.companyName;
+        if (company) {
+          document.title = 'Meus horários · ' + company;
+          document.getElementById('brand').textContent = company;
+        }
+      }).catch(function () {});
+      form.addEventListener('submit', async function (event) {
+        event.preventDefault();
+        var phone = digits(phoneInput.value);
+        if (phone.length < 10) { message.textContent = 'Informe um telefone válido com DDD.'; return; }
+        submit.disabled = true;
+        submit.textContent = 'Consultando…';
+        message.textContent = 'Buscando agendamentos…';
+        results.replaceChildren();
+        try {
+          var response = await fetch('/api/appointments/lookup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ phone: phone })
+          });
+          var data = await response.json();
+          if (!response.ok) throw new Error(data.message || 'Não foi possível consultar agora.');
+          if (!data.appointments.length) {
+            message.textContent = 'Não encontramos agendamentos para esse telefone.';
+            return;
+          }
+          message.textContent = data.appointments.length === 1 ? 'Encontramos 1 agendamento:' : 'Encontramos ' + data.appointments.length + ' agendamentos:';
+          renderAppointments(data.appointments);
+        } catch (error) {
+          message.textContent = error.message || 'Falha na consulta. Tente novamente.';
+        } finally {
+          submit.disabled = false;
+          submit.textContent = 'Consultar';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

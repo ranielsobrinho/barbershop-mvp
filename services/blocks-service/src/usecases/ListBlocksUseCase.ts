@@ -8,6 +8,7 @@ export class ListBlocksUseCase {
     const match = /^(\d{4})-(\d{2})$/.exec(month);
     if (!match) return this.repo.findAll();
     const y = parseInt(match[1], 10), m = parseInt(match[2], 10);
-    return this.repo.findByPeriod(new Date(Date.UTC(y, m - 1, 1)), new Date(Date.UTC(y, m, 1)));
+    // Convert Fortaleza's local midnight boundaries (UTC-03) to UTC instants.
+    return this.repo.findByPeriod(new Date(Date.UTC(y, m - 1, 1, 3)), new Date(Date.UTC(y, m, 1, 3)));
   }
 }

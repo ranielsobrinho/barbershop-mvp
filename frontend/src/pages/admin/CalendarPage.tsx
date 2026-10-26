@@ -5,11 +5,11 @@ import { Spinner } from '../../components/ui/Spinner';
 import { ErrorAlert } from '../../components/ui/ErrorAlert';
 import { useAppointmentsByMonth } from '../../hooks/useAppointments';
 import { useBlocks } from '../../hooks/useBlocks';
-import { monthString, MONTHS, addMonths, subMonths } from '../../utils/date';
+import { formatBusinessTime, getBusinessCalendarDate, getBusinessMonthStart, monthString, MONTHS, addMonths, subMonths } from '../../utils/date';
 import type { Appointment } from '../../services/publicApi';
 
 export function CalendarPage() {
-  const [currentMonth, setCurrentMonth] = useState(() => new Date());
+  const [currentMonth, setCurrentMonth] = useState(() => getBusinessMonthStart());
   const [selected, setSelected] = useState<Appointment | null>(null);
   const month = monthString(currentMonth);
 
@@ -36,7 +36,7 @@ export function CalendarPage() {
         <Spinner label="Carregando agenda..." />
       ) : (
         <div className="card">
-          <MonthlyCalendar appointments={appointments} blocks={blocks} onAppointmentClick={setSelected} />
+          <MonthlyCalendar appointments={appointments} blocks={blocks} onAppointmentClick={setSelected} currentMonth={currentMonth} />
         </div>
       )}
 
@@ -45,18 +45,21 @@ export function CalendarPage() {
         <div className="mt-6">
           <h2 className="text-lg font-bold text-gray-900 mb-3">Todos do mês</h2>
           <div className="space-y-2">
-            {appointments.map((a) => (
-              <button key={a.id} onClick={() => setSelected(a)} className="card w-full text-left flex items-center gap-3 hover:border-gray-300 transition">
-                <div className="text-center min-w-14">
-                  <p className="text-lg font-bold text-primary-700">{new Date(a.startsAt).getDate()}</p>
-                  <p className="text-xs text-gray-400">{MONTHS[new Date(a.startsAt).getMonth()].slice(0, 3)}</p>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{a.customerName}</p>
-                  <p className="text-sm text-gray-500 truncate">{a.service?.name} · {new Date(a.startsAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</p>
-                </div>
-              </button>
-            ))}
+            {appointments.map((a) => {
+              const startsAt = getBusinessCalendarDate(a.startsAt);
+              return (
+                <button key={a.id} onClick={() => setSelected(a)} className="card w-full text-left flex items-center gap-3 hover:border-gray-300 transition">
+                  <div className="text-center min-w-14">
+                    <p className="text-lg font-bold text-primary-700">{startsAt.getDate()}</p>
+                    <p className="text-xs text-gray-400">{MONTHS[startsAt.getMonth()].slice(0, 3)}</p>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-semibold text-gray-900 truncate">{a.customerName}</p>
+                    <p className="text-sm text-gray-500 truncate">{a.service?.name} · {formatBusinessTime(a.startsAt)}</p>
+                  </div>
+                </button>
+              );
+            })}
           </div>
         </div>
       )}
