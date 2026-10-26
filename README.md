@@ -80,19 +80,20 @@ pnpm install
 
 ### 2. Configure environment files
 
-`.env.example` documents the available variables and intentionally contains no values. The services load `.env` from their own package directories; Prisma and Vite also load environment files from their respective package directories. Create local copies:
+`.env.example` documents the available variables without containing credentials. Create a root `.env` for Docker Compose and local copies for the services:
 
 ```bash
+cp .env.example .env
 for dir in frontend services/* shared/prisma; do cp .env.example "$dir/.env"; done
 ```
 
-Fill in the required values in those local files. For local development, use a PostgreSQL connection such as:
+Generate private values for `POSTGRES_PASSWORD`, `JWT_SECRET`, and `COOKIE_SECRET` in the root `.env` (for example, with `openssl rand -hex 32`). The Compose stack refuses to start if these values are missing. For local development, use a PostgreSQL connection such as:
 
 ```text
-DATABASE_URL=postgresql://barbershop:barbershop@localhost:5432/barbershop
+DATABASE_URL=postgresql://barbershop:<POSTGRES_PASSWORD>@localhost:5432/barbershop
 ```
 
-Set `JWT_SECRET` and `COOKIE_SECRET` to private values for your local environment. The example file is a variable-name template; blank values are not ready-to-run credentials. `.env` files are ignored by Git and should never be committed.
+Set `JWT_SECRET` and `COOKIE_SECRET` in each service's local `.env` as well. The example file is a variable-name template; blank values are not ready-to-run credentials. `.env` files are ignored by Git and should never be committed.
 
 ### 3. Start PostgreSQL
 
@@ -102,7 +103,7 @@ To use the repository's local PostgreSQL 16 container:
 docker compose up -d postgres
 ```
 
-The Compose database is exposed at `localhost:5432` with database/user/password `barbershop`. These are local development defaults only. To stop the database container:
+The Compose database is exposed at `localhost:5432` with the database and user set to `barbershop`; its password comes from the root `.env`. To stop the database container:
 
 ```bash
 docker compose stop postgres

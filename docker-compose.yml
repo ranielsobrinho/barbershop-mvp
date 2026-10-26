@@ -5,9 +5,9 @@ x-app: &app
 x-backend-environment: &backend-environment
   NODE_ENV: ${NODE_ENV:-development}
   TZ: UTC
-  DATABASE_URL: postgresql://${POSTGRES_USER:-barbershop}:${POSTGRES_PASSWORD:-barbershop}@postgres:5432/${POSTGRES_DB:-barbershop}
-  JWT_SECRET: ${JWT_SECRET:-local-docker-jwt-secret-change-before-deploy-32-char}
-  COOKIE_SECRET: ${COOKIE_SECRET:-local-docker-cookie-secret-change-before-deploy}
+  DATABASE_URL: "postgresql://${POSTGRES_USER:-barbershop}:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env}@postgres:5432/${POSTGRES_DB:-barbershop}"
+  JWT_SECRET: "${JWT_SECRET:?Set JWT_SECRET in the root .env}"
+  COOKIE_SECRET: "${COOKIE_SECRET:?Set COOKIE_SECRET in the root .env}"
 
 x-service-healthcheck: &service-healthcheck
   test:
@@ -25,7 +25,7 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-barbershop}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-barbershop}
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the root .env}"
       POSTGRES_DB: ${POSTGRES_DB:-barbershop}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
