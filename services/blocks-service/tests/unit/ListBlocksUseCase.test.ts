@@ -73,19 +73,22 @@ describe('ListBlocksUseCase', () => {
     expect(result).toHaveLength(1);
   });
 
-  it('usa UTC para cálculo do período do mês', async () => {
-    // Bloqueio no primeiro dia do mês às 00:00 UTC
+  it('uses Fortaleza local-month boundaries expressed as UTC instants', async () => {
+    // Fortaleza is UTC-03: this interval is still Dec 31 locally.
     const b1 = Block.create(new Date('2025-01-01T00:00:00Z'), new Date('2025-01-01T01:00:00Z'));
-    // Bloqueio no último dia do mês às 23:59 UTC
-    const b2 = Block.create(new Date('2025-01-31T23:00:00Z'), new Date('2025-02-01T00:00:00Z'));
-    // Bloqueio no primeiro dia do mês seguinte
-    const b3 = Block.create(new Date('2025-02-01T00:00:00Z'), new Date('2025-02-01T01:00:00Z'));
+    // This block crosses Fortaleza midnight into January.
+    const b2 = Block.create(new Date('2025-01-01T02:00:00Z'), new Date('2025-01-01T04:00:00Z'));
+    // This block is within January locally, even though its end is Feb 1 in UTC.
+    const b3 = Block.create(new Date('2025-02-01T01:00:00Z'), new Date('2025-02-01T02:00:00Z'));
+    // Starts exactly at February 1 midnight in Fortaleza, so it belongs to February.
+    const b4 = Block.create(new Date('2025-02-01T03:00:00Z'), new Date('2025-02-01T04:00:00Z'));
     repo.addBlock(b1);
     repo.addBlock(b2);
     repo.addBlock(b3);
+    repo.addBlock(b4);
 
     const result = await useCase.execute('2025-01');
     expect(result).toHaveLength(2);
-    expect(result.map(r => r.id)).toEqual(expect.arrayContaining([b1.id, b2.id]));
+    expect(result.map(r => r.id)).toEqual(expect.arrayContaining([b2.id, b3.id]));
   });
 });

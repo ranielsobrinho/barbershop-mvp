@@ -1,7 +1,7 @@
 # REPORT.md — Seu Carlos Barbearia
 
 **Brief:** self-authored from the user's eight answers, under explicit creative delegation. No interview transcript.
-**Local URL:** http://localhost:8080 (landing) · http://localhost:8080/app (painel)
+**Local URL:** http://localhost:8080 (landing) · http://localhost:8080/painel (painel)
 **Build:** `scrollcraft/builds/barbershop-mvp/`
 
 ---
@@ -78,7 +78,7 @@ No video and no scrub. Five device families are present on desktop: pin, kinetic
 - **Mobile** 390×844, 8 samples/act: 5.3vh, `pin > flow > flow`, no dead scroll, all cues ≥4.5:1. Worst hero-lede contrast 6.72:1. `lab/mobile/`.
 - **Reduced motion** desktop and mobile: no dead scroll, all cues ≥4.5:1. `lab/reduced/`, `lab/mobile-reduced/`.
 - **Booking flow on mobile:** 11 enabled dates, 16 slots, phone mask `(85) 98888-7777`, card inked with service/date/time/client/total, `AGENDADO` stamp at 0.9 opacity, done panel visible, no demo prefix on the ficha number. `lab/mobile-confirmed.png`.
-- **`/app`:** redirects to `/app/admin/login`, renders the login form, all assets and the favicon return 200.
+- **`/painel`:** redirects to `/painel/admin/login`, renders the login form, all assets and the favicon return 200.
 - **Demo fallback:** forced with `?demo=1`; auto when the gateway is down. The only console errors in the harness are the expected 502s from the absent gateway.
 
 ## Not verified

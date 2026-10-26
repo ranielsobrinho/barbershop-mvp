@@ -5,6 +5,7 @@ import { GetAppointmentsByMonthUseCase } from '../../../usecases/GetAppointments
 import { GetBlockedDatesUseCase } from '../../../usecases/GetBlockedDatesUseCase.js';
 import { UpdateAppointmentStatusUseCase } from '../../../usecases/UpdateAppointmentStatusUseCase.js';
 import { RescheduleAppointmentUseCase } from '../../../usecases/RescheduleAppointmentUseCase.js';
+import { GetAppointmentsByPhoneUseCase } from '../../../usecases/GetAppointmentsByPhoneUseCase.js';
 import { AvailabilityService } from '../../../domain/services/AvailabilityService.js';
 import { ConflictChecker } from '../../../domain/services/ConflictChecker.js';
 import { PrismaAppointmentRepository } from '../../../infrastructure/repositories/PrismaAppointmentRepository.js';
@@ -29,6 +30,7 @@ export function makeSchedulingController(): SchedulingController {
     new GetAppointmentsByMonthUseCase(appointmentRepo),
     new GetBlockedDatesUseCase(blockRepo),
     new UpdateAppointmentStatusUseCase(appointmentRepo, conflictChecker),
-    new RescheduleAppointmentUseCase(appointmentRepo, serviceRepo, settingsRepo, availability)
+    new RescheduleAppointmentUseCase(appointmentRepo, serviceRepo, settingsRepo, availability),
+    new GetAppointmentsByPhoneUseCase(appointmentRepo)
   );
 }

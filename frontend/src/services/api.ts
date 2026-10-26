@@ -21,9 +21,9 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401 && window.location.pathname.startsWith('/app/admin')) {
+    if (error.response?.status === 401 && window.location.pathname.startsWith('/painel/admin')) {
       localStorage.removeItem('auth_token');
-      window.location.href = '/app/admin/login';
+      window.location.href = '/painel/admin/login';
     }
     return Promise.reject(error);
   }

@@ -16,3 +16,7 @@ export interface IAppointmentRepository {
    */
   withSlotLock<T>(startsAt: Date, callback: (tx: any) => Promise<T>): Promise<T>;
 }
+
+export interface IAppointmentLookupRepository {
+  findByPhone(phone: string): Promise<Array<{ appointment: Appointment; serviceName: string }>>;
+}

@@ -1,3 +1,4 @@
+import { notifyAppointment } from '../../../infrastructure/notifications/notifyAppointment.js';
 import { FastifyRequest, FastifyReply } from 'fastify';
 import { z } from 'zod';
 import { GetAvailabilityUseCase } from '../../../usecases/GetAvailabilityUseCase.js';
@@ -6,6 +7,7 @@ import { GetAppointmentsByMonthUseCase } from '../../../usecases/GetAppointments
 import { GetBlockedDatesUseCase } from '../../../usecases/GetBlockedDatesUseCase.js';
 import { UpdateAppointmentStatusUseCase } from '../../../usecases/UpdateAppointmentStatusUseCase.js';
 import { RescheduleAppointmentUseCase } from '../../../usecases/RescheduleAppointmentUseCase.js';
+import { GetAppointmentsByPhoneUseCase } from '../../../usecases/GetAppointmentsByPhoneUseCase.js';
 import { DomainError } from '../../../domain/errors/DomainError.js';
 
 function handleDomainError(reply: FastifyReply, error: unknown): void {
@@ -39,7 +41,8 @@ export class SchedulingController {
     private readonly getByMonth: GetAppointmentsByMonthUseCase,
     private readonly getBlockedDates: GetBlockedDatesUseCase,
     private readonly updateStatusUseCase: UpdateAppointmentStatusUseCase,
-    private readonly reschedule: RescheduleAppointmentUseCase
+    private readonly reschedule: RescheduleAppointmentUseCase,
+    private readonly getByPhone: GetAppointmentsByPhoneUseCase
   ) {}
 
   async availability(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -78,7 +81,19 @@ export class SchedulingController {
         customerPhone: input.customerPhone,
         startsAt: input.startsAt,
       });
+      await notifyAppointment(appointment.id, request.log);
       return reply.status(201).send({ appointment });
+    } catch (error) {
+      return handleDomainError(reply, error);
+    }
+  }
+
+  async lookupByPhone(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const input = z.object({ phone: z.string().min(10).max(20) }).parse(request.body);
+      const appointments = await this.getByPhone.execute(input.phone);
+      reply.header('cache-control', 'no-store');
+      return reply.send({ appointments });
     } catch (error) {
       return handleDomainError(reply, error);
     }
@@ -99,6 +114,7 @@ export class SchedulingController {
       const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
       const { status } = statusSchema.parse(request.body);
       const appointment = await this.updateStatusUseCase.execute(id, status);
+      await notifyAppointment(appointment.id, request.log);
       return reply.send({ appointment });
     } catch (error) {
       return handleDomainError(reply, error);
@@ -110,6 +126,7 @@ export class SchedulingController {
       const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
       const { newStartsAt } = rescheduleSchema.parse(request.body);
       const appointment = await this.reschedule.execute(id, newStartsAt);
+      await notifyAppointment(appointment.id, request.log);
       return reply.send({ appointment });
     } catch (error) {
       return handleDomainError(reply, error);

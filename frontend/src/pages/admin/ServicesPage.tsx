@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi, Service } from '../../services/adminApi';
-import { formatMoney } from '../../utils/money';
+import { formatMoney, sanitizePriceInput } from '../../utils/money';
 import { Spinner } from '../../components/ui/Spinner';
 import { ErrorAlert } from '../../components/ui/ErrorAlert';
 import { Modal } from '../../components/ui/Modal';
@@ -118,7 +118,7 @@ export function ServicesPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor="svc-price" className="label">Preço (R$) *</label>
-              <input id="svc-price" value={price} onChange={(e) => setPrice(e.target.value)} className="input-field" placeholder="45,00" inputMode="decimal" />
+              <input id="svc-price" value={price} onChange={(e) => setPrice(sanitizePriceInput(e.target.value))} className="input-field" placeholder="45,00" inputMode="decimal" autoComplete="off" />
             </div>
             <div>
               <label htmlFor="svc-slot" className="label">Duração (min) *</label>

@@ -5,6 +5,7 @@ import { PrismaSettingsRepository } from '../../../infrastructure/repositories/P
 const updateSchema = z.object({
   minNoticeHours: z.number().int().min(0).max(72).optional(),
   maxDaysAhead: z.number().int().min(1).max(365).optional(),
+  companyName: z.string().trim().min(1).max(100).optional(),
   heroText: z.string().max(500).nullable().optional(),
   heroImageUrl: z.string().url().max(500).nullable().optional(),
 });

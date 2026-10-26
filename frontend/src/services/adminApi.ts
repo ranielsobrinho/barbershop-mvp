@@ -11,7 +11,32 @@ export interface BusinessHours {
 }
 export interface Settings {
   id: string; minNoticeHours: number; maxDaysAhead: number;
+  companyName: string;
   heroText: string | null; heroImageUrl: string | null;
+}
+
+export type WhatsAppProvider = 'WAME' | 'ZAPSTER' | null;
+
+export interface WhatsAppIntegration {
+  provider: WhatsAppProvider;
+  wameApiKeyConfigured: boolean;
+  zapsterApiTokenConfigured: boolean;
+  zapsterInstanceId: string | null;
+  messageAwaitingConfirmation: string | null;
+  messageConfirmed: string | null;
+  messageCancelled: string | null;
+  messageRescheduled: string | null;
+}
+
+export interface WhatsAppIntegrationUpdate {
+  provider: WhatsAppProvider;
+  wameApiKey?: string;
+  zapsterApiToken?: string;
+  zapsterInstanceId?: string;
+  messageAwaitingConfirmation?: string;
+  messageConfirmed?: string;
+  messageCancelled?: string;
+  messageRescheduled?: string;
 }
 
 export const adminApi = {
@@ -86,5 +111,14 @@ export const adminApi = {
   updateSettings: async (payload: Partial<Settings>) => {
     const { data } = await api.put('/api/admin/settings', payload);
     return data.settings;
+  },
+
+  getWhatsAppIntegration: async (): Promise<WhatsAppIntegration> => {
+    const { data } = await api.get('/api/admin/whatsapp-integration');
+    return data.integration;
+  },
+  updateWhatsAppIntegration: async (payload: WhatsAppIntegrationUpdate): Promise<WhatsAppIntegration> => {
+    const { data } = await api.put('/api/admin/whatsapp-integration', payload);
+    return data.integration;
   },
 };

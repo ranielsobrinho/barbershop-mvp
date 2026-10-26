@@ -63,6 +63,7 @@ async function main() {
       id: 'default',
       minNoticeHours: 2,
       maxDaysAhead: 60,
+      companyName: 'Seu Carlos Barbearia',
       heroText: 'Seu Carlos Barbearia - Tradição e estilo no seu corte',
       heroImageUrl: '',
     },

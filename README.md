@@ -59,7 +59,7 @@ Online booking and administration for a barbershop. Customers can browse service
 
 Each backend service follows a ports-and-adapters / hexagonal structure, separating domain logic, use cases, interfaces, and infrastructure. The gateway exposes the public HTTP API and forwards requests to the services. The frontend uses the gateway; internal service communication uses gRPC where configured.
 
-`server.mjs` serves the static landing at `/`, serves the built admin panel at `/app`, and proxies `/api` to the gateway. In development it can proxy `/app` to Vite.
+`server.mjs` serves the static landing and booking flow at `/`, serves the React administration panel under `/painel`, and proxies `/api` to the gateway. In development it proxies `/painel` to Vite; the browser uses the same origin for API requests.
 
 ## Requirements
 
@@ -80,19 +80,20 @@ pnpm install
 
 ### 2. Configure environment files
 
-`.env.example` documents the available variables and intentionally contains no values. The services load `.env` from their own package directories; Prisma and Vite also load environment files from their respective package directories. Create local copies:
+`.env.example` documents the available variables without containing credentials. Create a root `.env` for Docker Compose and local copies for the services:
 
 ```bash
+cp .env.example .env
 for dir in frontend services/* shared/prisma; do cp .env.example "$dir/.env"; done
 ```
 
-Fill in the required values in those local files. For local development, use a PostgreSQL connection such as:
+Generate private values for `POSTGRES_PASSWORD`, `JWT_SECRET`, and `COOKIE_SECRET` in the root `.env` (for example, with `openssl rand -hex 32`). The Compose stack refuses to start if these values are missing. For local development, use a PostgreSQL connection such as:
 
 ```text
-DATABASE_URL=postgresql://barbershop:barbershop@localhost:5432/barbershop
+DATABASE_URL=postgresql://barbershop:<POSTGRES_PASSWORD>@localhost:5432/barbershop
 ```
 
-Set `JWT_SECRET` and `COOKIE_SECRET` to private values for your local environment. The example file is a variable-name template; blank values are not ready-to-run credentials. `.env` files are ignored by Git and should never be committed.
+Set `JWT_SECRET` and `COOKIE_SECRET` in each service's local `.env` as well. The example file is a variable-name template; blank values are not ready-to-run credentials. `.env` files are ignored by Git and should never be committed.
 
 ### 3. Start PostgreSQL
 
@@ -102,7 +103,7 @@ To use the repository's local PostgreSQL 16 container:
 docker compose up -d postgres
 ```
 
-The Compose database is exposed at `localhost:5432` with database/user/password `barbershop`. These are local development defaults only. To stop the database container:
+The Compose database is exposed at `localhost:5432` with the database and user set to `barbershop`; its password comes from the root `.env`. To stop the database container:
 
 ```bash
 docker compose stop postgres
@@ -127,20 +128,20 @@ pnpm dev
 This starts the landing/panel development server, the Vite frontend, and backend packages with development scripts. Open:
 
 - Landing page: <http://localhost:8080/>
-- Admin panel: <http://localhost:8080/app> (Vite-backed)
+- Admin panel: <http://localhost:8080/painel> (Vite-backed)
 - API health check: <http://localhost:3000/health>
 
-The dev server proxies `/api` to the gateway on port 3000. The admin panel can also be opened directly at <http://localhost:5173/>.
+The landing server proxies `/api` to the gateway on port 3000 and `/painel` to Vite. For standalone frontend development, Vite is available at <http://localhost:5173/painel/>.
 
 ### Docker Compose application stack
 
-To build and start the backend services and frontend containers:
+Build and start the complete stack, including PostgreSQL, the one-shot migration/seed job, all backend services, Vite, and the landing/panel proxy:
 
 ```bash
 docker compose up -d --build
 ```
 
-Compose does not run Prisma migrations or seed data automatically. Run the database commands above from the host after installing dependencies and configuring `shared/prisma/.env`. The static landing server (`server.mjs`) is not a Compose service; run `pnpm landing` separately if you want the landing and `/app` routes served together outside development.
+On startup, Compose waits for PostgreSQL, applies pending Prisma migrations, and loads the idempotent development seed before starting the APIs. Use the single web entry point at <http://localhost:8080/>: the public booking experience is at `/`, and the administration panel is at <http://localhost:8080/painel>. The gateway health check remains available at <http://localhost:3000/health>. Vite runs inside Compose for hot reload and is proxied through `/painel`; its port is not published to the host. Stop the stack with `docker compose down`; this keeps the database volume. To remove the database and its local data as well, use `docker compose down -v`.
 
 ## Development
 
@@ -160,7 +161,7 @@ pnpm --filter @barbershop/frontend build
 pnpm landing
 ```
 
-By default, it listens on port 8080. Options can be passed to `server.mjs`, for example `pnpm landing -- --port 8081 --gateway http://localhost:3000`. The `--dev` flag proxies `/app` to Vite:
+By default, it listens on port 8080. Options can be passed to `server.mjs`, for example `pnpm landing -- --port 8081 --gateway http://localhost:3000`. The `--dev` flag proxies `/painel` to Vite:
 
 ```bash
 pnpm landing:dev

@@ -1,5 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSettings } from '../../hooks/useSettings';
 
 const links = [
   { to: '/admin', label: 'Agenda', icon: '📅', end: true },
@@ -11,6 +12,7 @@ const links = [
 export function Sidebar() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const { data: settings } = useSettings();
 
   const handleLogout = async () => {
     await logout();
@@ -18,11 +20,11 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="bg-gray-900 text-white w-full lg:w-64 lg:min-h-screen flex lg:flex-col">
-      <div className="p-4 lg:p-5 border-b border-gray-800 flex items-center gap-3 flex-1">
+    <aside className="bg-gray-900 text-white w-full lg:w-64 lg:h-screen lg:min-h-screen lg:sticky lg:top-0 flex lg:flex-col">
+      <div className="p-4 lg:p-5 border-b border-gray-800 flex items-center gap-3 flex-1 lg:flex-none">
         <div className="w-9 h-9 bg-primary-600 rounded-lg flex items-center justify-center font-bold">S</div>
         <div className="hidden lg:block">
-          <p className="font-bold text-sm">Seu Carlos</p>
+          <p className="font-bold text-sm">{settings?.companyName || 'Seu Carlos Barbearia'}</p>
           <p className="text-gray-400 text-xs">{user?.email}</p>
         </div>
       </div>

@@ -6,6 +6,7 @@ interface HeroProps {
 
 export function Hero({ settings }: HeroProps) {
   const heroText = settings?.heroText || 'Seu Carlos Barbearia — Tradição e estilo no seu corte';
+  const companyName = settings?.companyName || 'Seu Carlos Barbearia';
 
   return (
     <section className="relative bg-gradient-to-br from-primary-900 via-primary-800 to-primary-950 text-white overflow-hidden">
@@ -19,7 +20,7 @@ export function Hero({ settings }: HeroProps) {
           Agendamento online
         </div>
         <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight mb-4">
-          Seu Carlos<br />Barbearia
+          {companyName}
         </h1>
         <p className="text-lg sm:text-xl text-primary-100 mb-8 max-w-md mx-auto">{heroText}</p>
         <a href="#agendar" className="btn-primary text-lg px-10 py-4 inline-flex">

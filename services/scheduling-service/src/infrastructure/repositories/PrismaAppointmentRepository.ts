@@ -1,6 +1,7 @@
-import { IAppointmentRepository } from '../../domain/repositories/IAppointmentRepository.js';
+import { IAppointmentLookupRepository, IAppointmentRepository } from '../../domain/repositories/IAppointmentRepository.js';
 import { Appointment, AppointmentStatus } from '../../domain/entities/Appointment.js';
 import { OCCUPYING_STATUSES } from '../../domain/value-objects/AppointmentStatus.js';
+import { getBusinessMonthUtcRange } from '../../domain/services/BusinessMonthRange.js';
 import prisma from '../database/prisma.js';
 
 function toDomain(a: any): Appointment {
@@ -17,7 +18,16 @@ function toIsoString(date: Date): string {
   return date.toISOString();
 }
 
-export class PrismaAppointmentRepository implements IAppointmentRepository {
+export class PrismaAppointmentRepository implements IAppointmentRepository, IAppointmentLookupRepository {
+  async findByPhone(phone: string): Promise<Array<{ appointment: Appointment; serviceName: string }>> {
+    const appointments = await prisma.appointment.findMany({
+      where: { customerPhone: phone },
+      include: { service: { select: { name: true } } },
+      orderBy: { startsAt: 'desc' },
+    });
+    return appointments.map((row) => ({ appointment: toDomain(row), serviceName: row.service.name }));
+  }
+
   async findById(id: string): Promise<Appointment | null> {
     const a = await prisma.appointment.findUnique({ where: { id } });
     return a ? toDomain(a) : null;
@@ -36,8 +46,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository {
   }
 
   async findByMonth(year: number, month: number): Promise<Appointment[]> {
-    const start = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0));
-    const end = new Date(Date.UTC(year, month, 1, 0, 0, 0));
+    const { start, end } = getBusinessMonthUtcRange(year, month);
     const list = await prisma.appointment.findMany({
       where: {
         startsAt: { gte: start, lt: end },

@@ -97,6 +97,13 @@ await app.register(proxy, {
 });
 
 await app.register(proxy, {
+  prefix: '/api/settings',
+  upstream: services.settings,
+  http2: false,
+  rewritePrefix: '/api/settings',
+});
+
+await app.register(proxy, {
   prefix: '/api/availability',
   upstream: services.scheduling,
   http2: false,
@@ -155,6 +162,14 @@ await app.register(proxy, {
   upstream: services.settings,
   http2: false,
   rewritePrefix: '/api/admin/settings',
+  preHandler: adminAuthMiddleware,
+});
+
+await app.register(proxy, {
+  prefix: '/api/admin/whatsapp-integration',
+  upstream: services.settings,
+  http2: false,
+  rewritePrefix: '/api/admin/whatsapp-integration',
   preHandler: adminAuthMiddleware,
 });
 
