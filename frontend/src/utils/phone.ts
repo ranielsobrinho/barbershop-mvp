@@ -9,7 +9,7 @@ export function maskPhone(value: string): string {
 
 export function isValidPhone(value: string): boolean {
   const digits = value.replace(/\D/g, '');
-  return /^(\d{10}|\d{11})$/.test(digits);
+  return /^(\d{2})9?\d{8}$/.test(digits);
 }
 
 export function formatPhone(digits: string): string {

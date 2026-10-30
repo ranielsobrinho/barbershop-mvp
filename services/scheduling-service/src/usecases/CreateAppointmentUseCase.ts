@@ -4,7 +4,7 @@ import { IAppointmentRepository } from '../domain/repositories/IAppointmentRepos
 import { IServiceRepository } from '../domain/repositories/IServiceRepository.js';
 import { ISettingsRepository } from '../domain/repositories/ISettingsRepository.js';
 import { Appointment } from '../domain/entities/Appointment.js';
-import { NotFoundError, ValidationError } from '../domain/errors/DomainError.js';
+import { ConflictError, NotFoundError, SlotUnavailableError, ValidationError } from '../domain/errors/DomainError.js';
 import { Phone } from '../domain/value-objects/Phone.js';
 import { addMinutes, parseISO } from 'date-fns';
 
@@ -46,6 +46,10 @@ export class CreateAppointmentUseCase {
 
     const endsAt = addMinutes(startsAt, service.slotMin);
 
+    // Do not trust the public client to submit only generated slots. Validate
+    // business hours, breaks, alignment, blocks, and existing appointments.
+    await this.availability.assertBookable(startsAt, endsAt, undefined, service.slotMin);
+
     // Anti-abuso: limite de agendamentos por telefone nas últimas 24h
     const phone = Phone.create(input.customerPhone);
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
@@ -65,7 +69,7 @@ export class CreateAppointmentUseCase {
         },
       });
       if (conflicts.length > 0) {
-        throw new ValidationError('Horário não disponível');
+        throw new ConflictError();
       }
 
       // Re-check blocks inside the transaction
@@ -76,7 +80,7 @@ export class CreateAppointmentUseCase {
         },
       });
       if (blocks.length > 0) {
-        throw new ValidationError('Horário bloqueado');
+        throw new SlotUnavailableError('Horário bloqueado');
       }
 
       // Preço copiado do serviço no momento da marcação (histórico)

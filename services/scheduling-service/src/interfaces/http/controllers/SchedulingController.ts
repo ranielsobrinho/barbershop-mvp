@@ -9,6 +9,7 @@ import { UpdateAppointmentStatusUseCase } from '../../../usecases/UpdateAppointm
 import { RescheduleAppointmentUseCase } from '../../../usecases/RescheduleAppointmentUseCase.js';
 import { GetAppointmentsByPhoneUseCase } from '../../../usecases/GetAppointmentsByPhoneUseCase.js';
 import { DomainError } from '../../../domain/errors/DomainError.js';
+import { AppointmentReminderAdminUseCase } from '../../../usecases/AppointmentReminderAdminUseCase.js';
 
 function handleDomainError(reply: FastifyReply, error: unknown): void {
   if (error instanceof DomainError) {
@@ -42,7 +43,8 @@ export class SchedulingController {
     private readonly getBlockedDates: GetBlockedDatesUseCase,
     private readonly updateStatusUseCase: UpdateAppointmentStatusUseCase,
     private readonly reschedule: RescheduleAppointmentUseCase,
-    private readonly getByPhone: GetAppointmentsByPhoneUseCase
+    private readonly getByPhone: GetAppointmentsByPhoneUseCase,
+    private readonly appointmentReminder: AppointmentReminderAdminUseCase,
   ) {}
 
   async availability(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -128,6 +130,26 @@ export class SchedulingController {
       const appointment = await this.reschedule.execute(id, newStartsAt);
       await notifyAppointment(appointment.id, request.log);
       return reply.send({ appointment });
+    } catch (error) {
+      return handleDomainError(reply, error);
+    }
+  }
+
+  async getAppointmentReminder(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+      const reminder = await this.appointmentReminder.getForAppointment(id);
+      return reply.send({ reminder });
+    } catch (error) {
+      return handleDomainError(reply, error);
+    }
+  }
+
+  async retryAppointmentReminder(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+      const reminder = await this.appointmentReminder.retry(id);
+      return reply.status(202).send({ reminder });
     } catch (error) {
       return handleDomainError(reply, error);
     }

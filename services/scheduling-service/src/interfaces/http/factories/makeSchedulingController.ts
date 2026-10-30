@@ -7,12 +7,14 @@ import { UpdateAppointmentStatusUseCase } from '../../../usecases/UpdateAppointm
 import { RescheduleAppointmentUseCase } from '../../../usecases/RescheduleAppointmentUseCase.js';
 import { GetAppointmentsByPhoneUseCase } from '../../../usecases/GetAppointmentsByPhoneUseCase.js';
 import { AvailabilityService } from '../../../domain/services/AvailabilityService.js';
-import { ConflictChecker } from '../../../domain/services/ConflictChecker.js';
 import { PrismaAppointmentRepository } from '../../../infrastructure/repositories/PrismaAppointmentRepository.js';
 import { PrismaServiceRepository } from '../../../infrastructure/repositories/PrismaServiceRepository.js';
 import { PrismaBlockRepository } from '../../../infrastructure/repositories/PrismaBlockRepository.js';
 import { PrismaBusinessHoursRepository } from '../../../infrastructure/repositories/PrismaBusinessHoursRepository.js';
 import { PrismaSettingsRepository } from '../../../infrastructure/repositories/PrismaSettingsRepository.js';
+import { PrismaAppointmentReminderRepository } from '../../../infrastructure/repositories/PrismaAppointmentReminderRepository.js';
+import { AppointmentReminderAdminUseCase } from '../../../usecases/AppointmentReminderAdminUseCase.js';
+import { AppointmentReminderScheduler } from '../../../usecases/AppointmentReminderScheduler.js';
 
 export function makeSchedulingController(): SchedulingController {
   const appointmentRepo = new PrismaAppointmentRepository();
@@ -20,8 +22,8 @@ export function makeSchedulingController(): SchedulingController {
   const blockRepo = new PrismaBlockRepository();
   const businessHoursRepo = new PrismaBusinessHoursRepository();
   const settingsRepo = new PrismaSettingsRepository();
+  const reminderScheduler = new AppointmentReminderScheduler();
 
-  const conflictChecker = new ConflictChecker(appointmentRepo);
   const availability = new AvailabilityService(businessHoursRepo, blockRepo, appointmentRepo, settingsRepo);
 
   return new SchedulingController(
@@ -29,8 +31,9 @@ export function makeSchedulingController(): SchedulingController {
     new CreateAppointmentUseCase(appointmentRepo, serviceRepo, settingsRepo, availability),
     new GetAppointmentsByMonthUseCase(appointmentRepo),
     new GetBlockedDatesUseCase(blockRepo),
-    new UpdateAppointmentStatusUseCase(appointmentRepo, conflictChecker),
-    new RescheduleAppointmentUseCase(appointmentRepo, serviceRepo, settingsRepo, availability),
-    new GetAppointmentsByPhoneUseCase(appointmentRepo)
+    new UpdateAppointmentStatusUseCase(appointmentRepo, reminderScheduler),
+    new RescheduleAppointmentUseCase(appointmentRepo, serviceRepo, settingsRepo, availability, reminderScheduler),
+    new GetAppointmentsByPhoneUseCase(appointmentRepo),
+    new AppointmentReminderAdminUseCase(appointmentRepo, new PrismaAppointmentReminderRepository())
   );
 }

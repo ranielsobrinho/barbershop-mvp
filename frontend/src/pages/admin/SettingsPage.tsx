@@ -38,6 +38,9 @@ export function SettingsPage() {
   const [messageConfirmed, setMessageConfirmed] = useState('');
   const [messageCancelled, setMessageCancelled] = useState('');
   const [messageRescheduled, setMessageRescheduled] = useState('');
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderHoursBefore, setReminderHoursBefore] = useState(24);
+  const [messageReminder, setMessageReminder] = useState('');
   const [showWhatsAppVariables, setShowWhatsAppVariables] = useState(false);
 
   useEffect(() => {
@@ -65,6 +68,9 @@ export function SettingsPage() {
       setMessageConfirmed(whatsapp.messageConfirmed || '');
       setMessageCancelled(whatsapp.messageCancelled || '');
       setMessageRescheduled(whatsapp.messageRescheduled || '');
+      setReminderEnabled(whatsapp.reminderEnabled ?? false);
+      setReminderHoursBefore(whatsapp.reminderHoursBefore ?? 24);
+      setMessageReminder(whatsapp.messageReminder || '');
     }
   }, [whatsapp]);
 
@@ -119,6 +125,14 @@ export function SettingsPage() {
         return;
       }
     }
+    if (reminderEnabled && waProvider === null) {
+      setWhatsAppError('Configure um provedor WhatsApp antes de ativar os lembretes.');
+      return;
+    }
+    if (!Number.isInteger(reminderHoursBefore) || reminderHoursBefore < 1 || reminderHoursBefore > 168) {
+      setWhatsAppError('O lembrete deve ser configurado entre 1 e 168 horas antes.');
+      return;
+    }
 
     try {
       const payload: WhatsAppIntegrationUpdate = {
@@ -127,6 +141,9 @@ export function SettingsPage() {
         messageConfirmed,
         messageCancelled,
         messageRescheduled,
+        reminderEnabled,
+        reminderHoursBefore,
+        messageReminder,
       };
       if (waProvider === 'WAME' && wameApiKey.trim()) payload.wameApiKey = wameApiKey.trim();
       if (waProvider === 'ZAPSTER') {
@@ -259,6 +276,50 @@ export function SettingsPage() {
             <div>
               <label htmlFor="wa-message-rescheduled" className="label">Reagendado</label>
               <textarea id="wa-message-rescheduled" value={messageRescheduled} onChange={(e) => setMessageRescheduled(e.target.value)} className="input-field" rows={3} maxLength={2000} disabled={isWhatsAppLoading} placeholder="Olá, {nome}! Seu agendamento de {servico} foi reagendado. Novo horário: {data} às {hora}. Horário anterior: {horario_anterior}." />
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <legend className="font-medium text-gray-900 px-1">Lembrete automático</legend>
+            <label className="flex items-start gap-3 text-sm text-gray-700">
+              <input
+                id="wa-reminder-enabled"
+                type="checkbox"
+                checked={reminderEnabled}
+                onChange={(e) => setReminderEnabled(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded"
+                disabled={isWhatsAppLoading}
+              />
+              <span>Enviar um lembrete por WhatsApp antes do agendamento</span>
+            </label>
+            <div>
+              <label htmlFor="wa-reminder-hours" className="label">Antecedência (horas)</label>
+              <input
+                id="wa-reminder-hours"
+                type="number"
+                min={1}
+                max={168}
+                step={1}
+                value={reminderHoursBefore}
+                onChange={(e) => setReminderHoursBefore(Number(e.target.value))}
+                className="input-field max-w-xs"
+                disabled={isWhatsAppLoading}
+              />
+              <p className="text-xs text-gray-500 mt-1">O padrão é 24 horas. Se o agendamento for feito com menos antecedência, o lembrete será enviado assim que possível.</p>
+            </div>
+            <div>
+              <label htmlFor="wa-message-reminder" className="label">Texto do lembrete</label>
+              <textarea
+                id="wa-message-reminder"
+                value={messageReminder}
+                onChange={(e) => setMessageReminder(e.target.value)}
+                className="input-field"
+                rows={3}
+                maxLength={2000}
+                disabled={isWhatsAppLoading}
+                placeholder="Olá, {nome}! Lembrete: seu agendamento de {servico} está marcado para {data}, às {hora}. Esperamos você!"
+              />
+              <p className="text-xs text-gray-500 mt-1">Deixe vazio para usar a mensagem padrão. O envio fica desativado se o provedor WhatsApp não estiver configurado.</p>
             </div>
           </fieldset>
 

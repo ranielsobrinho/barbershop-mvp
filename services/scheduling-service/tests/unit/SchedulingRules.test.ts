@@ -51,6 +51,9 @@ describe('SchedulingRules', () => {
     it('aceita celular com DDD (11 dígitos)', () => {
       expect(() => rules.validatePhone('(11) 98765-4321')).not.toThrow();
     });
+    it('rejeita celular de 11 dígitos sem nono dígito após o DDD', () => {
+      expect(() => rules.validatePhone('85123456789')).toThrow(ValidationError);
+    });
     it('aceita telefone fixo (10 dígitos)', () => {
       expect(() => rules.validatePhone('(11) 3456-7890')).not.toThrow();
     });

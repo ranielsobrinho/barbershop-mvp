@@ -13,4 +13,6 @@ export async function adminRoutes(app: FastifyInstance, c: SchedulingController)
   app.get('/api/admin/appointments', { preHandler: authMiddleware }, c.listByMonth.bind(c));
   app.patch('/api/admin/appointments/:id/status', { preHandler: authMiddleware }, c.updateStatus.bind(c));
   app.patch('/api/admin/appointments/:id/reschedule', { preHandler: authMiddleware }, c.rescheduleAppointment.bind(c));
+  app.get('/api/admin/appointments/:id/reminder', { preHandler: authMiddleware }, c.getAppointmentReminder.bind(c));
+  app.post('/api/admin/appointments/:id/reminder/retry', { preHandler: authMiddleware }, c.retryAppointmentReminder.bind(c));
 }

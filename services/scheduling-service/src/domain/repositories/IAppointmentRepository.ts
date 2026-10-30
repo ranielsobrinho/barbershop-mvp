@@ -10,8 +10,9 @@ export interface IAppointmentRepository {
   countByPhone(phone: string, since: Date): Promise<number>;
   
   /**
-   * Executes a callback within a transaction with an advisory lock on the given time slot.
-   * Uses pg_advisory_xact_lock(hashtext(startsAtISO)) to serialize concurrent creations for the same start time.
+   * Executes a schedule mutation within a transaction protected by a shared
+   * advisory lock. The lock serializes overlapping intervals even when they
+   * have different start times or service durations.
    * The callback receives a Prisma transaction client.
    */
   withSlotLock<T>(startsAt: Date, callback: (tx: any) => Promise<T>): Promise<T>;

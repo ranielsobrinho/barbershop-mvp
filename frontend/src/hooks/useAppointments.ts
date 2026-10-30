@@ -24,3 +24,20 @@ export function useReschedule() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['appointments'] }),
   });
 }
+
+export function useAppointmentReminder(appointmentId: string | null) {
+  return useQuery({
+    queryKey: ['appointment-reminder', appointmentId],
+    queryFn: () => adminApi.getAppointmentReminder(appointmentId!),
+    enabled: !!appointmentId,
+  });
+}
+
+export function useRetryAppointmentReminder() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (appointmentId: string) => adminApi.retryAppointmentReminder(appointmentId),
+    onSuccess: (_reminder, appointmentId) =>
+      qc.invalidateQueries({ queryKey: ['appointment-reminder', appointmentId] }),
+  });
+}

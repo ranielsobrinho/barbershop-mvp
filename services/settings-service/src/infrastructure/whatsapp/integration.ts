@@ -10,6 +10,9 @@ export const integrationSchema = z.object({
   messageConfirmed: z.string().trim().max(2000).optional(),
   messageCancelled: z.string().trim().max(2000).optional(),
   messageRescheduled: z.string().trim().max(2000).optional(),
+  reminderEnabled: z.boolean().optional(),
+  reminderHoursBefore: z.number().int().min(1).max(168).optional(),
+  messageReminder: z.string().trim().max(2000).optional(),
 }).strict();
 
 export interface Integration {
@@ -21,11 +24,15 @@ export interface Integration {
   messageConfirmed: string | null;
   messageCancelled: string | null;
   messageRescheduled: string | null;
+  reminderEnabled: boolean;
+  reminderHoursBefore: number;
+  messageReminder: string | null;
 }
 export const emptyIntegration: Integration = {
   provider: null, wameApiKey: null, zapsterApiToken: null, zapsterInstanceId: null,
   messageAwaitingConfirmation: null, messageConfirmed: null,
   messageCancelled: null, messageRescheduled: null,
+  reminderEnabled: false, reminderHoursBefore: 24, messageReminder: null,
 };
 export function publicIntegration(value: Integration) {
   return {
@@ -37,6 +44,9 @@ export function publicIntegration(value: Integration) {
     messageConfirmed: value.messageConfirmed,
     messageCancelled: value.messageCancelled,
     messageRescheduled: value.messageRescheduled,
+    reminderEnabled: value.reminderEnabled,
+    reminderHoursBefore: value.reminderHoursBefore,
+    messageReminder: value.messageReminder,
   };
 }
 function key() {
@@ -66,16 +76,22 @@ export function mergeIntegration(current: Integration, input: z.infer<typeof int
     messageConfirmed: input.messageConfirmed ?? current.messageConfirmed,
     messageCancelled: input.messageCancelled ?? current.messageCancelled,
     messageRescheduled: input.messageRescheduled ?? current.messageRescheduled,
+    reminderEnabled: input.reminderEnabled ?? current.reminderEnabled,
+    reminderHoursBefore: input.reminderHoursBefore ?? current.reminderHoursBefore,
+    messageReminder: input.messageReminder ?? current.messageReminder,
   };
   if (next.provider === 'WAME' && !next.wameApiKey) throw new Error('API Key Wame é obrigatória');
   if (next.provider === 'ZAPSTER' && (!next.zapsterApiToken || !next.zapsterInstanceId)) {
     throw new Error('Token e Instance ID Zapster são obrigatórios');
   }
+  if (next.reminderEnabled && !next.provider) {
+    throw new Error('Configure um provedor WhatsApp antes de ativar os lembretes');
+  }
   return next;
 }
 
-export async function sendMessage(config: Integration, phone: string, text: string, fetcher = fetch) {
-  if (!config.provider) return;
+export async function sendMessage(config: Integration, phone: string, text: string, fetcher = fetch): Promise<number | undefined> {
+  if (!config.provider) return undefined;
   let recipient = phone.replace(/\D/g, '');
   if (recipient.length === 10 || recipient.length === 11) recipient = `55${recipient}`;
   if (!/^[1-9]\d{10,14}$/.test(recipient)) throw new Error('Telefone inválido');
@@ -100,6 +116,7 @@ export async function sendMessage(config: Integration, phone: string, text: stri
     });
     if (!response.ok) throw new Error('Provider rejected message');
     await response.body?.cancel();
+    return response.status;
   } catch {
     throw new Error('Falha no envio WhatsApp');
   }

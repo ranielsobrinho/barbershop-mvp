@@ -122,6 +122,9 @@ await app.register(proxy, {
   upstream: services.scheduling,
   http2: false,
   rewritePrefix: '/api/appointments',
+  // Appointment lookup and booking share a tighter per-IP limit than the
+  // general API cap, which also helps protect the phone lookup endpoint.
+  config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
 });
 
 // Admin routes - require auth

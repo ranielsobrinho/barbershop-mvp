@@ -3,19 +3,24 @@ import jwt from 'jsonwebtoken';
 import { z } from 'zod';
 import { prisma } from '../../../infrastructure/database/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
-import { emptyIntegration, integrationSchema, mergeIntegration, publicIntegration, sendMessage } from '../../../infrastructure/whatsapp/integration.js';
+import { emptyIntegration, integrationSchema, mergeIntegration, publicIntegration, sendMessage, type Integration } from '../../../infrastructure/whatsapp/integration.js';
+
+function asIntegration(value: Awaited<ReturnType<typeof prisma.whatsAppIntegration.findUnique>>) {
+  return { ...emptyIntegration, ...value } as Integration;
+}
 
 export async function whatsappRoutes(app: FastifyInstance) {
   app.get('/api/admin/whatsapp-integration', { preHandler: authMiddleware }, async () => {
-    const config = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
-    return { integration: publicIntegration(config || emptyIntegration) };
+    const storedConfig = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
+    const config = asIntegration(storedConfig);
+    return { integration: publicIntegration(config) };
   });
   app.put('/api/admin/whatsapp-integration', { preHandler: authMiddleware }, async (request, reply) => {
     const parsed = integrationSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ message: 'Dados inválidos', details: parsed.error.flatten().fieldErrors });
     const current = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
     let next;
-    try { next = mergeIntegration(current || emptyIntegration, parsed.data); }
+    try { next = mergeIntegration(asIntegration(current), parsed.data); }
     catch (error) { return reply.code(400).send({ message: (error as Error).message }); }
     const config = await prisma.whatsAppIntegration.upsert({
       where: { id: 'default' }, create: { id: 'default', ...next }, update: next,
@@ -34,7 +39,8 @@ export async function whatsappRoutes(app: FastifyInstance) {
     } catch { return reply.code(401).send({ message: 'Unauthorized' }); }
     const parsed = z.object({ appointmentId: z.string().min(1) }).strict().safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ message: 'Dados inválidos' });
-    const config = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
+    const storedConfig = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
+    const config = asIntegration(storedConfig);
     if (!config?.provider) return { sent: false };
     const appointment = await prisma.appointment.findUnique({ where: { id: parsed.data.appointmentId }, include: { service: true } });
     if (!appointment) return reply.code(404).send({ message: 'Agendamento não encontrado' });
@@ -70,6 +76,63 @@ export async function whatsappRoutes(app: FastifyInstance) {
     } catch {
       request.log.warn({ appointmentId: appointment.id, provider: config.provider }, 'WhatsApp delivery failed');
       return reply.code(502).send({ message: 'Falha no envio WhatsApp' });
+    }
+  });
+
+  app.post('/internal/whatsapp/reminders', async (request, reply) => {
+    try {
+      const secret = process.env.WHATSAPP_INTERNAL_SECRET;
+      if (!secret) throw new Error('Missing secret');
+      jwt.verify(request.headers.authorization?.replace(/^Bearer /, '') || '', secret, {
+        algorithms: ['HS256'], audience: 'whatsapp-notifications', issuer: 'scheduling-service',
+      });
+    } catch { return reply.code(401).send({ message: 'Unauthorized' }); }
+
+    const parsed = z.object({
+      appointmentId: z.string().min(1),
+      idempotencyKey: z.string().uuid(),
+    }).strict().safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ message: 'Dados inválidos' });
+
+    const reminder = await prisma.appointmentReminder.findUnique({
+      where: { idempotencyKey: parsed.data.idempotencyKey },
+      select: { appointmentId: true, status: true, nextAttemptAt: true },
+    });
+    if (
+      !reminder || reminder.appointmentId !== parsed.data.appointmentId ||
+      reminder.status !== 'PROCESSING' || reminder.nextAttemptAt.getTime() > Date.now()
+    ) return { sent: false, reason: 'reminder-not-currently-due' };
+
+    const storedConfig = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
+    const config = asIntegration(storedConfig);
+    if (!config.reminderEnabled) return { sent: false, reason: 'disabled' };
+    if (!config.provider) return { sent: false, reason: 'provider-not-configured' };
+
+    const appointment = await prisma.appointment.findUnique({
+      where: { id: parsed.data.appointmentId },
+      include: { service: true },
+    });
+    if (!appointment) return reply.code(404).send({ message: 'Agendamento não encontrado' });
+    if (!['CONFIRMADO', 'REAGENDADO'].includes(appointment.status)) {
+      return { sent: false, reason: 'appointment-inactive' };
+    }
+
+    const values: Record<string, string> = {
+      nome: appointment.customerName,
+      servico: appointment.service.name,
+      data: new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Fortaleza', dateStyle: 'short' }).format(appointment.startsAt),
+      hora: new Intl.DateTimeFormat('pt-BR', { timeZone: 'America/Fortaleza', timeStyle: 'short' }).format(appointment.startsAt),
+      valor: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(appointment.priceCents / 100),
+    };
+    const template = config.messageReminder?.trim() ||
+      'Olá, {nome}! Lembrete: seu agendamento de {servico} está marcado para {data}, às {hora}. Esperamos você!';
+    const message = template.replace(/\{([a-z_]+)\}/g, (match, key: string) => values[key] ?? match);
+    try {
+      const providerResponseCode = await sendMessage(config, appointment.customerPhone, message);
+      return { sent: true, providerResponseCode };
+    } catch {
+      request.log.warn({ appointmentId: appointment.id, provider: config.provider }, 'WhatsApp reminder delivery failed');
+      return reply.code(502).send({ message: 'Falha no envio do lembrete WhatsApp' });
     }
   });
 }

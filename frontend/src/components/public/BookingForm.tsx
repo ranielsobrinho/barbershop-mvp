@@ -55,13 +55,23 @@ export function BookingForm({ onConfirmed }: Props) {
   // Ref to track previous raw value for cursor position calculation
   const prevRawValueRef = useRef<string>('');
 
-  const { data: services, isLoading: servicesLoading } = useServices();
+  const {
+    data: services,
+    isLoading: servicesLoading,
+    isError: servicesError,
+    refetch: reloadServices,
+  } = useServices();
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const monthStr = monthString(currentMonth);
   const { data: blockedDates = [] } = useBlockedDates(monthStr);
 
   const dateStr = selectedDate ? toDateString(selectedDate) : null;
-  const { data: slots, isLoading: slotsLoading } = useAvailability(dateStr, serviceId);
+  const {
+    data: slots,
+    isLoading: slotsLoading,
+    isError: slotsError,
+    refetch: reloadSlots,
+  } = useAvailability(dateStr, serviceId);
 
   const selectedService = services?.find(s => s.id === serviceId) || null;
 
@@ -173,7 +183,9 @@ export function BookingForm({ onConfirmed }: Props) {
       queryClient.invalidateQueries({ queryKey: ['availability'] });
       onConfirmed(appointment);
     } catch (err: any) {
-      const msg = err.response?.data?.message || 'Erro ao agendar. Tente novamente.';
+      const msg = err.response?.status === 429
+        ? 'Muitas tentativas em pouco tempo. Aguarde um minuto e tente novamente.'
+        : err.response?.data?.message || 'Erro ao agendar. Tente novamente.';
       setSubmitError(msg);
       if (err.response?.status === 409) {
         // Horário foi ocupado — volta para seleção de horário
@@ -186,6 +198,14 @@ export function BookingForm({ onConfirmed }: Props) {
   };
 
   if (servicesLoading) return <Spinner />;
+  if (servicesError) {
+    return (
+      <div className="card text-center" role="alert">
+        <ErrorAlert message="Não foi possível carregar os serviços. Verifique sua conexão e tente novamente." />
+        <button type="button" onClick={() => reloadServices()} className="btn-secondary mt-4 w-full">Tentar novamente</button>
+      </div>
+    );
+  }
 
   const stepTitle = ['Escolha o serviço', 'Escolha a data', 'Escolha o horário', 'Seus dados'][step - 1];
 
@@ -251,13 +271,19 @@ export function BookingForm({ onConfirmed }: Props) {
         <div>
           <p className="text-sm text-gray-500 mb-3">{selectedDate && format(selectedDate, "dd/MM/yyyy")}</p>
           {slotsLoading && <Spinner label="Carregando horários..." />}
-          {!slotsLoading && slots && slots.length === 0 && (
+          {!slotsLoading && slotsError && (
+            <div className="text-center py-6" role="alert">
+              <p className="text-red-700 mb-4">Não foi possível carregar os horários. Verifique sua conexão e tente novamente.</p>
+              <button type="button" onClick={() => reloadSlots()} className="btn-secondary w-full">Tentar novamente</button>
+            </div>
+          )}
+          {!slotsLoading && !slotsError && slots && slots.length === 0 && (
             <div className="text-center py-6">
               <p className="text-gray-500 mb-4">Nenhum horário disponível para este dia. Escolha outra data.</p>
               <button type="button" onClick={() => setStep(2)} className="btn-secondary w-full">Escolher outra data</button>
             </div>
           )}
-          {!slotsLoading && slots && slots.length > 0 && (
+          {!slotsLoading && !slotsError && slots && slots.length > 0 && (
             <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-64 overflow-y-auto" role="radiogroup">
               {slots.map((slot) => (
                 <button
@@ -276,7 +302,7 @@ export function BookingForm({ onConfirmed }: Props) {
               ))}
             </div>
           )}
-          {!slotsLoading && slots && slots.length > 0 && (
+          {!slotsLoading && !slotsError && slots && slots.length > 0 && (
             <button type="button" onClick={() => setStep(2)} className="btn-secondary mt-4 w-full">← Voltar</button>
           )}
         </div>

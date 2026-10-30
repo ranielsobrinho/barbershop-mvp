@@ -5,7 +5,11 @@ const mocks = vi.hoisted(() => ({ save: vi.fn(), failed: false }));
 vi.mock('../../src/hooks/useSettings', () => ({ useSettings: () => ({}), useUpdateSettings: () => ({}) }));
 const hours: never[] = [];
 vi.mock('../../src/hooks/useBusinessHours', () => ({ useBusinessHours: () => ({ data: hours }), useUpdateBusinessHours: () => ({}) }));
-const integration = { provider: 'WAME', wameApiKeyConfigured: true, zapsterApiTokenConfigured: false, zapsterInstanceId: null };
+const integration = {
+  provider: 'WAME', wameApiKeyConfigured: true, zapsterApiTokenConfigured: false, zapsterInstanceId: null,
+  messageAwaitingConfirmation: null, messageConfirmed: null, messageCancelled: null, messageRescheduled: null,
+  reminderEnabled: false, reminderHoursBefore: 24, messageReminder: null,
+};
 vi.mock('../../src/hooks/useWhatsAppIntegration', () => ({
   useWhatsAppIntegration: () => ({ data: mocks.failed ? undefined : integration, isError: mocks.failed }),
   useUpdateWhatsAppIntegration: () => ({ mutateAsync: mocks.save, isPending: false }),
@@ -15,7 +19,16 @@ describe('WhatsApp settings form', () => {
   it('preserves saved credentials when the field is blank', async () => {
     render(<SettingsPage />);
     fireEvent.click(screen.getByRole('button', { name: 'Salvar integração WhatsApp' }));
-    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith({ provider: 'WAME' }));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalledWith({
+      provider: 'WAME',
+      messageAwaitingConfirmation: '',
+      messageConfirmed: '',
+      messageCancelled: '',
+      messageRescheduled: '',
+      reminderEnabled: false,
+      reminderHoursBefore: 24,
+      messageReminder: '',
+    }));
   });
   it('requires credentials for an unconfigured provider', () => {
     render(<SettingsPage />);

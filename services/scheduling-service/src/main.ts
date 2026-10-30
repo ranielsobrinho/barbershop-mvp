@@ -5,6 +5,7 @@ import { env } from './infrastructure/config/env.js';
 import { prisma } from './infrastructure/database/prisma.js';
 import { publicRoutes, adminRoutes } from './interfaces/http/routes/schedulingRoutes.js';
 import { makeSchedulingController } from './interfaces/http/factories/makeSchedulingController.js';
+import { AppointmentReminderWorker } from './infrastructure/reminders/AppointmentReminderWorker.js';
 
 // Fail-fast in production for required secrets
 if (env.nodeEnv === 'production') {
@@ -35,6 +36,7 @@ await app.register(helmet);
 await app.register(cookie, { secret: process.env.COOKIE_SECRET || env.jwt.secret, hook: 'onRequest' });
 
 const controller = makeSchedulingController();
+const reminderWorker = new AppointmentReminderWorker(app.log);
 await publicRoutes(app, controller);
 await adminRoutes(app, controller);
 
@@ -52,6 +54,7 @@ try {
 try {
   await app.listen({ port: env.port, host: '0.0.0.0' });
   app.log.info(`Scheduling service listening on ${env.port}`);
+  reminderWorker.start();
 } catch (error) {
   app.log.error(error);
   process.exit(1);
@@ -59,6 +62,7 @@ try {
 
 const shutdown = async (signal: string): Promise<void> => {
   app.log.info(`Received ${signal}, shutting down`);
+  await reminderWorker.stop();
   await app.close();
   await prisma.$disconnect();
   process.exit(0);

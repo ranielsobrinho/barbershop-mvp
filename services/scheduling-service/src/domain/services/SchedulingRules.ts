@@ -39,7 +39,7 @@ export class SchedulingRules {
   /** Telefone BR com DDD: (11) 9XXXX-XXXX */
   validatePhone(phone: string): void {
     const digits = phone.replace(/\D/g, '');
-    if (!/^(\d{10}|\d{11})$/.test(digits)) {
+    if (!/^(\d{2})9?\d{8}$/.test(digits)) {
       throw new ValidationError('Telefone deve ter DDD e 8 ou 9 dígitos');
     }
   }
