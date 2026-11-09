@@ -90,7 +90,7 @@ export class AvailabilityService {
    * expediente ativo, dentro da abertura/fechamento, sem cruzar almoço,
    * sem tocar em bloqueio e sem sobrepor agendamento que ocupa.
    */
-  async assertBookable(startsAt: Date, endsAt: Date, excludeId?: string): Promise<void> {
+  async assertBookable(startsAt: Date, endsAt: Date, excludeId?: string, slotMin?: number): Promise<void> {
     const wall = toZonedTime(startsAt, this.timezone);
     const endWall = toZonedTime(endsAt, this.timezone);
 
@@ -104,6 +104,14 @@ export class AvailabilityService {
     const endMin = endWall.getHours() * 60 + endWall.getMinutes();
     const openMin = this.generator.toMinutes(businessHours.opensAt);
     const closeMin = this.generator.toMinutes(businessHours.closesAt);
+
+    if (startsAt.getUTCSeconds() !== 0 || startsAt.getUTCMilliseconds() !== 0) {
+      throw new SlotUnavailableError('Horário deve começar em um minuto exato');
+    }
+
+    if (slotMin !== undefined && (endMin - startMin !== slotMin || (startMin - openMin) % slotMin !== 0)) {
+      throw new SlotUnavailableError('Horário não corresponde a um horário disponível');
+    }
 
     if (startMin < openMin || endMin > closeMin) {
       throw new SlotUnavailableError('Horário fora do expediente');
@@ -129,9 +137,9 @@ export class AvailabilityService {
   }
 
   /** true se o horário pode ser gravado (expediente + bloqueios + conflitos). */
-  async isSlotFree(startsAt: Date, endsAt: Date, excludeId?: string): Promise<boolean> {
+  async isSlotFree(startsAt: Date, endsAt: Date, excludeId?: string, slotMin?: number): Promise<boolean> {
     try {
-      await this.assertBookable(startsAt, endsAt, excludeId);
+      await this.assertBookable(startsAt, endsAt, excludeId, slotMin);
       return true;
     } catch {
       return false;

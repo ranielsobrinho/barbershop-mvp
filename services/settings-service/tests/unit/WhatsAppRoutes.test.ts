@@ -31,7 +31,7 @@ describe('WhatsApp management endpoints', () => {
   it('returns disabled defaults before first save', async () => {
     const response = await app.inject({ method: 'GET', url: '/api/admin/whatsapp-integration', headers: headers() });
     expect(response.statusCode).toBe(200);
-    expect(response.json().integration).toEqual({ provider: null, wameApiKeyConfigured: false, zapsterApiTokenConfigured: false, zapsterInstanceId: null, messageAwaitingConfirmation: null, messageConfirmed: null, messageCancelled: null, messageRescheduled: null });
+    expect(response.json().integration).toEqual({ provider: null, wameApiKeyConfigured: false, zapsterApiTokenConfigured: false, zapsterInstanceId: null, messageAwaitingConfirmation: null, messageConfirmed: null, messageCancelled: null, messageRescheduled: null, reminderEnabled: false, reminderHoursBefore: 24, messageReminder: null });
   });
   it('saves encrypted credentials and never returns them', async () => {
     db.upsert.mockImplementation(async ({ create }) => create);

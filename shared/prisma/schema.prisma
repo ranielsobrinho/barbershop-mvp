@@ -46,10 +46,35 @@ model Appointment {
   updatedAt          DateTime @updatedAt
 
   service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  reminders AppointmentReminder[]
 
   @@index([startsAt, status])
   @@index([startsAt, endsAt, status])
   @@map("appointments")
+}
+
+model AppointmentReminder {
+  id                    String                    @id @default(cuid())
+  appointmentId         String
+  scheduledAt           DateTime
+  nextAttemptAt         DateTime
+  status                AppointmentReminderStatus @default(PENDING)
+  attemptCount          Int                       @default(0)
+  lastAttemptAt         DateTime?
+  sentAt                DateTime?
+  providerResponseCode  Int?
+  lastError             String?                   @db.Text
+  idempotencyKey        String                    @unique
+  leaseExpiresAt        DateTime?
+  leaseToken            String?
+  createdAt             DateTime                  @default(now())
+  updatedAt             DateTime                  @updatedAt
+
+  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+
+  @@index([status, nextAttemptAt])
+  @@index([appointmentId, createdAt])
+  @@map("appointment_reminders")
 }
 
 model BusinessHours {
@@ -99,6 +124,14 @@ enum AppointmentStatus {
   REAGENDADO
 }
 
+enum AppointmentReminderStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+  CANCELLED
+}
+
 model WhatsAppIntegration {
   id                String @id @default("default")
   provider          WhatsAppProvider?
@@ -109,6 +142,9 @@ model WhatsAppIntegration {
   messageConfirmed             String? @db.Text
   messageCancelled              String? @db.Text
   messageRescheduled            String? @db.Text
+  reminderEnabled               Boolean @default(false)
+  reminderHoursBefore           Int     @default(24)
+  messageReminder               String? @db.Text
   updatedAt         DateTime @updatedAt
 
   @@map("whatsapp_integration")

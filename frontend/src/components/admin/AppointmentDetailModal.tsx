@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { DateInput } from '../ui/DateInput';
 import { StatusBadge } from '../ui/Badge';
-import { useUpdateStatus, useReschedule } from '../../hooks/useAppointments';
+import { useUpdateStatus, useReschedule, useAppointmentReminder, useRetryAppointmentReminder } from '../../hooks/useAppointments';
 import { formatMoney } from '../../utils/money';
 import { formatBusinessFullDate, formatBusinessTime, getBusinessCalendarDate, toDateString } from '../../utils/date';
 import { parseDateInput } from '../../utils/dateInput';
 import { STATUS_LABELS } from '../../utils/constants';
+import { useToast } from '../../contexts/ToastContext';
 import type { Appointment } from '../../services/publicApi';
 
 interface Props {
@@ -15,14 +16,22 @@ interface Props {
 }
 
 export function AppointmentDetailModal({ appointment, onClose }: Props) {
+  const { showToast } = useToast();
   const updateStatus = useUpdateStatus();
   const reschedule = useReschedule();
+  const reminderQuery = useAppointmentReminder(appointment?.id ?? null);
+  const retryReminder = useRetryAppointmentReminder();
   const [showReschedule, setShowReschedule] = useState(false);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [reminderError, setReminderError] = useState<string | null>(null);
   const newDateIso = parseDateInput(newDate);
   const minDate = toDateString(getBusinessCalendarDate(new Date()));
+
+  useEffect(() => {
+    if (reminderQuery.isError) showToast('Não foi possível carregar o status do lembrete.', 'error');
+  }, [reminderQuery.isError, showToast]);
 
   if (!appointment) return null;
 
@@ -35,24 +44,45 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
     setError(null);
     try {
       await updateStatus.mutateAsync({ id: appointment.id, status });
+      showToast(`Status do agendamento atualizado: ${STATUS_LABELS[status] || status}.`);
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao alterar status');
+      const message = err.response?.data?.message || 'Erro ao alterar status';
+      setError(message);
+      showToast(message, 'error');
     }
   };
 
   const handleReschedule = async () => {
     if (!newDateIso || !newTime || newDateIso < minDate) {
-      setError('Informe uma data válida a partir de hoje no formato DD/MM/AAAA e um horário.');
+      const message = 'Informe uma data válida a partir de hoje no formato DD/MM/AAAA e um horário.';
+      setError(message);
+      showToast(message, 'error');
       return;
     }
     setError(null);
     try {
       const d = new Date(`${newDateIso}T${newTime}:00-03:00`);
       await reschedule.mutateAsync({ id: appointment.id, newStartsAt: d.toISOString() });
+      showToast('Agendamento reagendado com sucesso.');
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao reagendar');
+      const message = err.response?.data?.message || 'Erro ao reagendar';
+      setError(message);
+      showToast(message, 'error');
+    }
+  };
+
+  const handleRetryReminder = async () => {
+    if (!appointment) return;
+    setReminderError(null);
+    try {
+      await retryReminder.mutateAsync(appointment.id);
+      showToast('Nova tentativa de envio do lembrete agendada.');
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Não foi possível agendar uma nova tentativa.';
+      setReminderError(message);
+      showToast(message, 'error');
     }
   };
 
@@ -92,6 +122,35 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
             </div>
           )}
         </div>
+
+        <section className="rounded-xl border border-gray-200 p-4 space-y-2" aria-label="Lembrete do agendamento">
+          <h4 className="font-semibold text-gray-900">Lembrete por WhatsApp</h4>
+          {reminderQuery.isLoading && <p className="text-sm text-gray-500">Carregando status do lembrete…</p>}
+          {reminderQuery.isError && <p className="text-sm text-red-700">Não foi possível carregar o status do lembrete.</p>}
+          {!reminderQuery.isLoading && !reminderQuery.isError && !reminderQuery.data && (
+            <p className="text-sm text-gray-500">Nenhum lembrete foi agendado para este horário.</p>
+          )}
+          {reminderQuery.data && (
+            <>
+              <p className="text-sm text-gray-700">
+                {({ PENDING: 'Agendado', PROCESSING: 'Enviando', SENT: 'Enviado', FAILED: 'Falha no envio', CANCELLED: 'Cancelado' } as const)[reminderQuery.data.status]}
+                {' · '}{formatBusinessFullDate(reminderQuery.data.scheduledAt)} às {formatBusinessTime(reminderQuery.data.scheduledAt)}
+              </p>
+              {reminderQuery.data.status === 'FAILED' && (
+                <>
+                  <p className="text-xs text-red-700">{reminderQuery.data.lastError || 'O envio falhou.'} ({reminderQuery.data.attemptCount} tentativas)</p>
+                  <button type="button" onClick={handleRetryReminder} disabled={retryReminder.isPending} className="btn-secondary text-sm">
+                    {retryReminder.isPending ? 'Agendando nova tentativa…' : 'Tentar envio novamente'}
+                  </button>
+                </>
+              )}
+              {reminderQuery.data.status === 'SENT' && reminderQuery.data.providerResponseCode && (
+                <p className="text-xs text-gray-500">Resposta do provedor: HTTP {reminderQuery.data.providerResponseCode}</p>
+              )}
+            </>
+          )}
+          {reminderError && <p role="alert" className="text-sm text-red-700">{reminderError}</p>}
+        </section>
 
         {error && <div className="bg-red-50 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>}
 

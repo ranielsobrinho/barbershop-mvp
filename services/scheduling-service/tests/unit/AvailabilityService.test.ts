@@ -147,6 +147,18 @@ describe('AvailabilityService.assertBookable', () => {
     await expect(makeAssertService().assertBookable(validStart, validEnd)).resolves.toBeUndefined();
   });
 
+  it('aceita somente o início alinhado à duração do serviço', async () => {
+    await expect(makeAssertService().assertBookable(validStart, validEnd, undefined, 30)).resolves.toBeUndefined();
+    await expect(
+      makeAssertService().assertBookable(
+        new Date(Date.UTC(2026, 9, 20, 12, 15)),
+        new Date(Date.UTC(2026, 9, 20, 12, 45)),
+        undefined,
+        30,
+      ),
+    ).rejects.toThrow(/horário disponível/);
+  });
+
   it('rejeita dia sem expediente ativo', async () => {
     const service = makeAssertService({ bh: bh({ active: false }) });
     await expect(service.assertBookable(validStart, validEnd)).rejects.toThrow(SlotUnavailableError);

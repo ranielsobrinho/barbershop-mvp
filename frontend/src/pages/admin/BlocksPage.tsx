@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useBlocks, useCreateBlock, useDeleteBlock } from '../../hooks/useBlocks';
 import { Spinner } from '../../components/ui/Spinner';
 import { ErrorAlert } from '../../components/ui/ErrorAlert';
@@ -6,11 +6,13 @@ import { Modal } from '../../components/ui/Modal';
 import { DateInput } from '../../components/ui/DateInput';
 import { format, parseISO, monthString, MONTHS, addMonths, subMonths, toDateString, getBusinessCalendarDate } from '../../utils/date';
 import { formatDateInput, parseDateInput } from '../../utils/dateInput';
+import { useToast } from '../../contexts/ToastContext';
 
 export function BlocksPage() {
+  const { showToast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const month = monthString(currentMonth);
-  const { data: blocks = [], isLoading } = useBlocks(month);
+  const { data: blocks = [], isLoading, error: blocksError } = useBlocks(month);
   const createBlock = useCreateBlock();
   const deleteBlock = useDeleteBlock();
 
@@ -22,6 +24,10 @@ export function BlocksPage() {
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [affected, setAffected] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    if (blocksError) showToast('Erro ao carregar bloqueios.', 'error');
+  }, [blocksError, showToast]);
 
   const openModal = (m: 'day' | 'range' | 'hours') => {
     setMode(m); setError(null); setAffected(null); setReason('');
@@ -37,7 +43,9 @@ export function BlocksPage() {
       const dateFromIso = parseDateInput(dateFrom);
       const dateToIso = parseDateInput(dateTo || dateFrom);
       if (!dateFromIso || !dateToIso) {
-        setError('Informe uma data válida no formato DD/MM/AAAA.');
+        const message = 'Informe uma data válida no formato DD/MM/AAAA.';
+        setError(message);
+        showToast(message, 'error');
         return;
       }
 
@@ -46,10 +54,20 @@ export function BlocksPage() {
       if (mode === 'hours') {
         const s = new Date(`${dateFromIso}T${timeFrom}:00-03:00`);
         const e = new Date(`${dateFromIso}T${timeTo}:00-03:00`);
-        if (e <= s) { setError('Horário final deve ser após o inicial'); return; }
+        if (e <= s) {
+          const message = 'Horário final deve ser após o inicial';
+          setError(message);
+          showToast(message, 'error');
+          return;
+        }
         startsAt = s.toISOString(); endsAt = e.toISOString();
       } else if (mode === 'range') {
-        if (dateToIso < dateFromIso) { setError('Data final deve ser após a inicial'); return; }
+        if (dateToIso < dateFromIso) {
+          const message = 'Data final deve ser após a inicial';
+          setError(message);
+          showToast(message, 'error');
+          return;
+        }
         const s = new Date(`${dateFromIso}T00:00:00-03:00`);
         const e = new Date(`${dateToIso}T23:59:59-03:00`);
         startsAt = s.toISOString(); endsAt = e.toISOString();
@@ -62,21 +80,33 @@ export function BlocksPage() {
       const result = await createBlock.mutateAsync({ startsAt, endsAt, reason: reason || undefined, confirmed });
       if ((result as any).affectedAppointments?.length) {
         setAffected((result as any).affectedAppointments);
+        showToast(`${(result as any).affectedAppointments.length} agendamento(s) serão afetados por este bloqueio.`, 'warning');
         return;
       }
       setMode(null);
+      showToast('Bloqueio criado com sucesso.');
     } catch (err: any) {
       if (err.response?.status === 409) {
         setAffected(err.response.data.affectedAppointments || []);
         setError(err.response.data.message);
+        showToast(err.response.data.message || 'Este bloqueio afeta agendamentos existentes.', 'warning');
       } else {
-        setError(err.response?.data?.message || 'Erro ao criar bloqueio');
+        const message = err.response?.data?.message || 'Erro ao criar bloqueio';
+        setError(message);
+        showToast(message, 'error');
       }
     }
   };
 
   const handleDelete = async (id: string) => {
-    try { await deleteBlock.mutateAsync(id); } catch (err: any) { setError(err.response?.data?.message || 'Erro ao excluir'); }
+    try {
+      await deleteBlock.mutateAsync(id);
+      showToast('Bloqueio removido com sucesso.');
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Erro ao excluir bloqueio';
+      setError(message);
+      showToast(message, 'error');
+    }
   };
 
   return (

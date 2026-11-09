@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch --env-file=.env src/main.ts",
     "build": "tsc",
+    "lint": "tsc --noEmit",
     "start": "node --env-file=.env dist/main.js",
     "test": "vitest run"
   },

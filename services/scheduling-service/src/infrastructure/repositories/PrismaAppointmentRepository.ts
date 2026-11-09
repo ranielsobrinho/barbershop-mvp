@@ -13,10 +13,10 @@ function toDomain(a: any): Appointment {
   );
 }
 
-function toIsoString(date: Date): string {
-  // Return ISO string in UTC for consistent hashing
-  return date.toISOString();
-}
+// Single-shop MVP: serialize every schedule mutation so overlapping intervals
+// with different start times cannot pass the conflict check concurrently.
+const SCHEDULE_LOCK_NAMESPACE = 910721;
+const SCHEDULE_LOCK_KEY = 1;
 
 export class PrismaAppointmentRepository implements IAppointmentRepository, IAppointmentLookupRepository {
   async findByPhone(phone: string): Promise<Array<{ appointment: Appointment; serviceName: string }>> {
@@ -114,11 +114,15 @@ export class PrismaAppointmentRepository implements IAppointmentRepository, IApp
     });
   }
 
-  async withSlotLock<T>(startsAt: Date, callback: (tx: any) => Promise<T>): Promise<T> {
-    const isoString = toIsoString(startsAt);
+  async withSlotLock<T>(_startsAt: Date, callback: (tx: any) => Promise<T>): Promise<T> {
     return prisma.$transaction(async (tx) => {
-      // Acquire advisory lock for this time slot to serialize concurrent bookings
-      await tx.$executeRawUnsafe(`SELECT pg_advisory_xact_lock(hashtext($1))`, isoString);
+      // The lock must cover the whole schedule, not an exact start timestamp:
+      // different service durations can produce overlapping intervals.
+      await tx.$queryRawUnsafe(
+        'SELECT pg_advisory_xact_lock($1::integer, $2::integer) IS NULL',
+        SCHEDULE_LOCK_NAMESPACE,
+        SCHEDULE_LOCK_KEY,
+      );
       return callback(tx);
     });
   }

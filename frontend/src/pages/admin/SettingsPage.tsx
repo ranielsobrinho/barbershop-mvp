@@ -3,15 +3,24 @@ import { useSettings, useUpdateSettings } from '../../hooks/useSettings';
 import { useBusinessHours, useUpdateBusinessHours } from '../../hooks/useBusinessHours';
 import { useWhatsAppIntegration, useUpdateWhatsAppIntegration } from '../../hooks/useWhatsAppIntegration';
 import { Spinner } from '../../components/ui/Spinner';
-import { ErrorAlert } from '../../components/ui/ErrorAlert';
 import { Modal } from '../../components/ui/Modal';
 import { WEEKDAYS_FULL } from '../../utils/date';
 import type { BusinessHours, WhatsAppIntegration, WhatsAppIntegrationUpdate } from '../../services/adminApi';
+import { useToast } from '../../contexts/ToastContext';
+
+const DEFAULT_WHATSAPP_MESSAGES = {
+  awaitingConfirmation: 'Olá, {nome}! Recebemos seu agendamento de {servico} para {data} às {hora}. Estamos aguardando confirmação.',
+  confirmed: 'Olá, {nome}! Seu agendamento de {servico} para {data} às {hora} foi confirmado.',
+  cancelled: 'Olá, {nome}. Seu agendamento de {servico} para {data} às {hora} foi cancelado.',
+  rescheduled: 'Olá, {nome}! Seu agendamento de {servico} foi reagendado. Novo horário: {data} às {hora}. Horário anterior: {horario_anterior}.',
+  reminder: 'Olá, {nome}! Lembrete: seu agendamento de {servico} está marcado para {data}, às {hora}. Esperamos você!',
+};
 
 export function SettingsPage() {
-  const { data: settings, isLoading: settingsLoading } = useSettings();
+  const { showToast } = useToast();
+  const { data: settings, isLoading: settingsLoading, error: settingsLoadError } = useSettings();
   const updateSettings = useUpdateSettings();
-  const { data: hours = [], isLoading: hoursLoading } = useBusinessHours();
+  const { data: hours = [], isLoading: hoursLoading, error: hoursLoadError } = useBusinessHours();
   const updateHours = useUpdateBusinessHours();
   const { data: whatsapp, isLoading: whatsappLoading, isError: whatsappLoadError } = useWhatsAppIntegration();
   const updateWhatsApp = useUpdateWhatsAppIntegration();
@@ -21,12 +30,6 @@ export function SettingsPage() {
   const [companyName, setCompanyName] = useState('');
   const [heroText, setHeroText] = useState('');
   const [heroImage, setHeroImage] = useState('');
-  const [savedSettings, setSavedSettings] = useState(false);
-  const [savedHours, setSavedHours] = useState(false);
-  const [savedWhatsApp, setSavedWhatsApp] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [hoursError, setHoursError] = useState<string | null>(null);
-  const [whatsappError, setWhatsAppError] = useState<string | null>(null);
   const [hoursDraft, setHoursDraft] = useState<BusinessHours[]>([]);
 
   // WhatsApp state
@@ -34,11 +37,26 @@ export function SettingsPage() {
   const [wameApiKey, setWameApiKey] = useState('');
   const [zapsterApiToken, setZapsterApiToken] = useState('');
   const [zapsterInstanceId, setZapsterInstanceId] = useState('');
-  const [messageAwaitingConfirmation, setMessageAwaitingConfirmation] = useState('');
-  const [messageConfirmed, setMessageConfirmed] = useState('');
-  const [messageCancelled, setMessageCancelled] = useState('');
-  const [messageRescheduled, setMessageRescheduled] = useState('');
+  const [messageAwaitingConfirmation, setMessageAwaitingConfirmation] = useState(DEFAULT_WHATSAPP_MESSAGES.awaitingConfirmation);
+  const [messageConfirmed, setMessageConfirmed] = useState(DEFAULT_WHATSAPP_MESSAGES.confirmed);
+  const [messageCancelled, setMessageCancelled] = useState(DEFAULT_WHATSAPP_MESSAGES.cancelled);
+  const [messageRescheduled, setMessageRescheduled] = useState(DEFAULT_WHATSAPP_MESSAGES.rescheduled);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderHoursBefore, setReminderHoursBefore] = useState(24);
+  const [messageReminder, setMessageReminder] = useState(DEFAULT_WHATSAPP_MESSAGES.reminder);
   const [showWhatsAppVariables, setShowWhatsAppVariables] = useState(false);
+
+  useEffect(() => {
+    if (settingsLoadError) showToast('Erro ao carregar as configurações.', 'error');
+  }, [settingsLoadError, showToast]);
+
+  useEffect(() => {
+    if (hoursLoadError) showToast('Erro ao carregar o horário de funcionamento.', 'error');
+  }, [hoursLoadError, showToast]);
+
+  useEffect(() => {
+    if (whatsappLoadError) showToast('Erro ao carregar a integração WhatsApp.', 'error');
+  }, [whatsappLoadError, showToast]);
 
   useEffect(() => {
     if (settings) {
@@ -61,16 +79,18 @@ export function SettingsPage() {
       setWameApiKey('');
       setZapsterApiToken('');
       setZapsterInstanceId(whatsapp.zapsterInstanceId || '');
-      setMessageAwaitingConfirmation(whatsapp.messageAwaitingConfirmation || '');
-      setMessageConfirmed(whatsapp.messageConfirmed || '');
-      setMessageCancelled(whatsapp.messageCancelled || '');
-      setMessageRescheduled(whatsapp.messageRescheduled || '');
+      setMessageAwaitingConfirmation(whatsapp.messageAwaitingConfirmation || DEFAULT_WHATSAPP_MESSAGES.awaitingConfirmation);
+      setMessageConfirmed(whatsapp.messageConfirmed || DEFAULT_WHATSAPP_MESSAGES.confirmed);
+      setMessageCancelled(whatsapp.messageCancelled || DEFAULT_WHATSAPP_MESSAGES.cancelled);
+      setMessageRescheduled(whatsapp.messageRescheduled || DEFAULT_WHATSAPP_MESSAGES.rescheduled);
+      setReminderEnabled(whatsapp.reminderEnabled ?? false);
+      setReminderHoursBefore(whatsapp.reminderHoursBefore ?? 24);
+      setMessageReminder(whatsapp.messageReminder || DEFAULT_WHATSAPP_MESSAGES.reminder);
     }
   }, [whatsapp]);
 
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null); setSavedSettings(false);
     try {
       await updateSettings.mutateAsync({
         minNoticeHours: minNotice,
@@ -79,45 +99,56 @@ export function SettingsPage() {
         heroText: heroText || null,
         heroImageUrl: heroImage || null,
       });
-      setSavedSettings(true);
-      setTimeout(() => setSavedSettings(false), 3000);
+      showToast('Configurações salvas com sucesso.');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao salvar');
+      const message = err.response?.data?.message || 'Erro ao salvar configurações';
+      showToast(message, 'error');
     }
   };
 
   const handleSaveHours = async () => {
-    setHoursError(null); setSavedHours(false);
     try {
       await updateHours.mutateAsync(hoursDraft.map(h => ({
         weekday: h.weekday, opensAt: h.opensAt, closesAt: h.closesAt,
         breakStart: h.breakStart, breakEnd: h.breakEnd, active: h.active,
       })));
-      setSavedHours(true);
-      setTimeout(() => setSavedHours(false), 3000);
+      showToast('Horário de funcionamento salvo com sucesso.');
     } catch (err: any) {
-      setHoursError(err.response?.data?.message || 'Erro ao salvar');
+      const message = err.response?.data?.message || 'Erro ao salvar horário de funcionamento';
+      showToast(message, 'error');
     }
   };
 
   const handleSaveWhatsApp = async (e: React.FormEvent) => {
     e.preventDefault();
-    setWhatsAppError(null); setSavedWhatsApp(false);
 
     // Validation
     if (waProvider === 'WAME' && !wameApiKey.trim() && !whatsapp?.wameApiKeyConfigured) {
-      setWhatsAppError('API Key da instância Wame é obrigatória');
+      const message = 'API Key da instância Wame é obrigatória';
+      showToast(message, 'error');
       return;
     }
     if (waProvider === 'ZAPSTER') {
       if (!zapsterApiToken.trim() && !whatsapp?.zapsterApiTokenConfigured) {
-        setWhatsAppError('Bearer token Zapster é obrigatório');
+        const message = 'Bearer token Zapster é obrigatório';
+        showToast(message, 'error');
         return;
       }
       if (!zapsterInstanceId.trim() && !whatsapp?.zapsterInstanceId) {
-        setWhatsAppError('Instance ID Zapster é obrigatório');
+        const message = 'Instance ID Zapster é obrigatório';
+        showToast(message, 'error');
         return;
       }
+    }
+    if (reminderEnabled && waProvider === null) {
+      const message = 'Configure um provedor WhatsApp antes de ativar os lembretes.';
+      showToast(message, 'error');
+      return;
+    }
+    if (!Number.isInteger(reminderHoursBefore) || reminderHoursBefore < 1 || reminderHoursBefore > 168) {
+      const message = 'O lembrete deve ser configurado entre 1 e 168 horas antes.';
+      showToast(message, 'error');
+      return;
     }
 
     try {
@@ -127,6 +158,9 @@ export function SettingsPage() {
         messageConfirmed,
         messageCancelled,
         messageRescheduled,
+        reminderEnabled,
+        reminderHoursBefore,
+        messageReminder,
       };
       if (waProvider === 'WAME' && wameApiKey.trim()) payload.wameApiKey = wameApiKey.trim();
       if (waProvider === 'ZAPSTER') {
@@ -137,10 +171,10 @@ export function SettingsPage() {
       // Clear secret fields after successful save
       setWameApiKey('');
       setZapsterApiToken('');
-      setSavedWhatsApp(true);
-      setTimeout(() => setSavedWhatsApp(false), 3000);
+      showToast('Integração WhatsApp salva com sucesso.');
     } catch (err: any) {
-      setWhatsAppError(err.response?.data?.message || 'Erro ao salvar integração WhatsApp');
+      const message = err.response?.data?.message || 'Erro ao salvar integração WhatsApp';
+      showToast(message, 'error');
     }
   };
 
@@ -160,8 +194,6 @@ export function SettingsPage() {
       <section className="card mb-6">
         <h2 className="text-lg font-bold text-gray-900 mb-1">Horário de funcionamento</h2>
         <p className="text-sm text-gray-500 mb-4">Define a disponibilidade exibida ao cliente</p>
-        <ErrorAlert message={hoursError} />
-        {savedHours && <div className="bg-green-50 text-green-700 text-sm rounded-xl px-4 py-3 mb-3">✓ Expediente salvo com sucesso</div>}
 
         <div className="space-y-3">
           {[...hoursDraft].sort((a, b) => a.weekday - b.weekday).map((h) => (
@@ -192,8 +224,6 @@ export function SettingsPage() {
       {/* Configurações gerais */}
       <section className="card mb-6">
         <h2 className="text-lg font-bold text-gray-900 mb-1">Regras de agendamento</h2>
-        <ErrorAlert message={error} />
-        {savedSettings && <div className="bg-green-50 text-green-700 text-sm rounded-xl px-4 py-3 mb-3">✓ Configurações salvas</div>}
 
         <form onSubmit={handleSaveSettings} className="space-y-4">
           <div>
@@ -232,8 +262,6 @@ export function SettingsPage() {
         <p className="text-sm text-gray-500 mb-4">
           Configure o provedor para envio automático de mensagens em novos agendamentos, confirmação, cancelamento e reagendamento.
         </p>
-        <ErrorAlert message={whatsappLoadError ? 'Não foi possível carregar a integração WhatsApp. Recarregue a página para tentar novamente.' : whatsappError} />
-        {savedWhatsApp && <div className="bg-green-50 text-green-700 text-sm rounded-xl px-4 py-3 mb-3">✓ Integração WhatsApp salva com sucesso</div>}
 
         <form onSubmit={handleSaveWhatsApp} className="space-y-4">
           <fieldset className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -246,19 +274,63 @@ export function SettingsPage() {
             </div>
             <div>
               <label htmlFor="wa-message-awaiting" className="label">Aguardando confirmação</label>
-              <textarea id="wa-message-awaiting" value={messageAwaitingConfirmation} onChange={(e) => setMessageAwaitingConfirmation(e.target.value)} className="input-field" rows={3} maxLength={2000} disabled={isWhatsAppLoading} placeholder="Olá, {nome}! Recebemos seu agendamento de {servico} para {data} às {hora}. Estamos aguardando confirmação." />
+              <textarea id="wa-message-awaiting" value={messageAwaitingConfirmation} onChange={(e) => setMessageAwaitingConfirmation(e.target.value)} className="input-field" rows={3} maxLength={2000} disabled={isWhatsAppLoading} placeholder={DEFAULT_WHATSAPP_MESSAGES.awaitingConfirmation} />
             </div>
             <div>
               <label htmlFor="wa-message-confirmed" className="label">Confirmado</label>
-              <textarea id="wa-message-confirmed" value={messageConfirmed} onChange={(e) => setMessageConfirmed(e.target.value)} className="input-field" rows={3} maxLength={2000} disabled={isWhatsAppLoading} placeholder="Olá, {nome}! Seu agendamento de {servico} para {data} às {hora} foi confirmado." />
+              <textarea id="wa-message-confirmed" value={messageConfirmed} onChange={(e) => setMessageConfirmed(e.target.value)} className="input-field" rows={3} maxLength={2000} disabled={isWhatsAppLoading} placeholder={DEFAULT_WHATSAPP_MESSAGES.confirmed} />
             </div>
             <div>
               <label htmlFor="wa-message-cancelled" className="label">Cancelado</label>
-              <textarea id="wa-message-cancelled" value={messageCancelled} onChange={(e) => setMessageCancelled(e.target.value)} className="input-field" rows={3} maxLength={2000} disabled={isWhatsAppLoading} placeholder="Olá, {nome}. Seu agendamento de {servico} para {data} às {hora} foi cancelado." />
+              <textarea id="wa-message-cancelled" value={messageCancelled} onChange={(e) => setMessageCancelled(e.target.value)} className="input-field" rows={3} maxLength={2000} disabled={isWhatsAppLoading} placeholder={DEFAULT_WHATSAPP_MESSAGES.cancelled} />
             </div>
             <div>
               <label htmlFor="wa-message-rescheduled" className="label">Reagendado</label>
-              <textarea id="wa-message-rescheduled" value={messageRescheduled} onChange={(e) => setMessageRescheduled(e.target.value)} className="input-field" rows={3} maxLength={2000} disabled={isWhatsAppLoading} placeholder="Olá, {nome}! Seu agendamento de {servico} foi reagendado. Novo horário: {data} às {hora}. Horário anterior: {horario_anterior}." />
+              <textarea id="wa-message-rescheduled" value={messageRescheduled} onChange={(e) => setMessageRescheduled(e.target.value)} className="input-field" rows={3} maxLength={2000} disabled={isWhatsAppLoading} placeholder={DEFAULT_WHATSAPP_MESSAGES.rescheduled} />
+            </div>
+          </fieldset>
+
+          <fieldset className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <legend className="font-medium text-gray-900 px-1">Lembrete automático</legend>
+            <label className="flex items-start gap-3 text-sm text-gray-700">
+              <input
+                id="wa-reminder-enabled"
+                type="checkbox"
+                checked={reminderEnabled}
+                onChange={(e) => setReminderEnabled(e.target.checked)}
+                className="mt-1 h-4 w-4 rounded"
+                disabled={isWhatsAppLoading}
+              />
+              <span>Enviar um lembrete por WhatsApp antes do agendamento</span>
+            </label>
+            <div>
+              <label htmlFor="wa-reminder-hours" className="label">Antecedência (horas)</label>
+              <input
+                id="wa-reminder-hours"
+                type="number"
+                min={1}
+                max={168}
+                step={1}
+                value={reminderHoursBefore}
+                onChange={(e) => setReminderHoursBefore(Number(e.target.value))}
+                className="input-field max-w-xs"
+                disabled={isWhatsAppLoading}
+              />
+              <p className="text-xs text-gray-500 mt-1">O padrão é 24 horas. Se o agendamento for feito com menos antecedência, o lembrete será enviado assim que possível.</p>
+            </div>
+            <div>
+              <label htmlFor="wa-message-reminder" className="label">Texto do lembrete</label>
+              <textarea
+                id="wa-message-reminder"
+                value={messageReminder}
+                onChange={(e) => setMessageReminder(e.target.value)}
+                className="input-field"
+                rows={3}
+                maxLength={2000}
+                disabled={isWhatsAppLoading}
+                placeholder={DEFAULT_WHATSAPP_MESSAGES.reminder}
+              />
+              <p className="text-xs text-gray-500 mt-1">Deixe vazio para usar a mensagem padrão. O envio fica desativado se o provedor WhatsApp não estiver configurado.</p>
             </div>
           </fieldset>
 

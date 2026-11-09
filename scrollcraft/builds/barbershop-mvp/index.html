@@ -137,15 +137,6 @@ img { max-width: 100%; }
 }
 .hero__pole--back { width: clamp(2.4rem, 4.4vw, 3.6rem); height: 54%; right: 5%; top: 8%; opacity: .5; filter: blur(.4px); }
 .hero__pole--front { width: clamp(2.8rem, 5.2vw, 4.4rem); height: 66%; left: 7%; bottom: -3%; }
-.hero__seal {
-  position: absolute; right: 12%; bottom: 10%; z-index: 4;
-  width: clamp(3.4rem, 5vw, 4.6rem); aspect-ratio: 1; border-radius: 50%;
-  display: grid; place-items: center; border: 1px solid color-mix(in oklab, var(--sc-ink) 30%, transparent);
-  font-family: var(--sc-font-display); font-size: 1.15rem; color: var(--sc-ink-soft);
-  background: color-mix(in oklab, var(--sc-canvas) 70%, transparent);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
-}
-
 /* -------------------------------------------------------------- services -- */
 .svc-rail {
   display: flex; align-items: center; gap: clamp(1rem, 2.2vw, 2rem);
@@ -399,7 +390,6 @@ img { max-width: 100%; }
   .hero__plate { inset: 7% -18% 58% 40%; }
   .hero__img { inset: 7% -18% 58% 40%; width: 78%; height: 35%; }
   .hero__pole { display: none; }
-  .hero__seal { display: none; }
   .hero__copy { max-width: 100%; }
   .hero__title { font-size: var(--sc-t-2xl); }
   .hero__word { font-size: 42vw; bottom: 2%; }
@@ -473,7 +463,6 @@ img { max-width: 100%; }
           <img class="hero__img" id="heroImg" alt="" hidden data-sc-parallax="-0.12" width="900" height="1100">
           <div class="hero__pole hero__pole--back" data-sc-parallax="-0.3"></div>
           <div class="hero__pole hero__pole--front" data-sc-parallax="0.15"></div>
-          <span class="hero__seal">SC</span>
         </div>
       </div>
     </div>

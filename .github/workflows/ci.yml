@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Lint and test all workspaces
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://barbershop:ci_password@localhost:5432/barbershop?schema=public
+      PHASE1_TEST_DATABASE_URL: postgresql://barbershop:ci_password@localhost:5432/barbershop?schema=public
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: barbershop
+          POSTGRES_PASSWORD: ci_password
+          POSTGRES_DB: barbershop
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U barbershop -d barbershop"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client and protobuf types
+        run: |
+          pnpm db:generate
+          pnpm proto:generate
+
+      - name: Lint and type-check every workspace
+        run: pnpm lint
+
+      - name: Apply database migrations
+        run: pnpm --filter @barbershop/prisma db:migrate:deploy
+
+      - name: Run all workspace tests
+        run: pnpm test

@@ -18,7 +18,7 @@ describe('WhatsApp configuration', () => {
     const zapster = mergeIntegration(wame, { provider: 'ZAPSTER', zapsterApiToken: 'token', zapsterInstanceId: 'id' });
     const disabled = mergeIntegration(zapster, { provider: null });
     expect(mergeIntegration(disabled, { provider: 'WAME' }).wameApiKey).toBe(wame.wameApiKey);
-    expect(publicIntegration(zapster)).toEqual({ provider: 'ZAPSTER', wameApiKeyConfigured: true, zapsterApiTokenConfigured: true, zapsterInstanceId: 'id', messageAwaitingConfirmation: null, messageConfirmed: null, messageCancelled: null, messageRescheduled: null });
+    expect(publicIntegration(zapster)).toEqual({ provider: 'ZAPSTER', wameApiKeyConfigured: true, zapsterApiTokenConfigured: true, zapsterInstanceId: 'id', messageAwaitingConfirmation: null, messageConfirmed: null, messageCancelled: null, messageRescheduled: null, reminderEnabled: false, reminderHoursBefore: 24, messageReminder: null });
   });
   it('rejects unsupported providers and incomplete activation', () => {
     expect(integrationSchema.safeParse({ provider: 'OTHER' }).success).toBe(false);

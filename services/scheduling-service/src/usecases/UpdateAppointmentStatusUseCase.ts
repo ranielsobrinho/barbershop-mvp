@@ -1,13 +1,13 @@
 import { IAppointmentRepository } from '../domain/repositories/IAppointmentRepository.js';
-import { ConflictChecker } from '../domain/services/ConflictChecker.js';
 import { Appointment, AppointmentStatus } from '../domain/entities/Appointment.js';
 import { NotFoundError, ConflictError } from '../domain/errors/DomainError.js';
 import { isStatus, OCCUPYING_STATUSES } from '../domain/value-objects/AppointmentStatus.js';
+import { AppointmentReminderScheduler } from './AppointmentReminderScheduler.js';
 
 export class UpdateAppointmentStatusUseCase {
   constructor(
     private readonly appointmentRepo: IAppointmentRepository,
-    private readonly conflictChecker: ConflictChecker
+    private readonly reminderScheduler = new AppointmentReminderScheduler(),
   ) {}
 
   async execute(id: string, status: string): Promise<Appointment> {
@@ -16,18 +16,46 @@ export class UpdateAppointmentStatusUseCase {
     const existing = await this.appointmentRepo.findById(id);
     if (!existing) throw new NotFoundError('Agendamento', id);
 
-    // Transição para status que ocupa: checar conflito (ex: cancelado → confirmado)
-    if (OCCUPYING_STATUSES.includes(status as AppointmentStatus) && existing.status === 'CANCELADO') {
-      await this.conflictChecker.assertNoConflict(existing.startsAt, existing.endsAt, existing.id);
-    }
+    return this.appointmentRepo.withSlotLock(existing.startsAt, async (tx) => {
+      const current = await tx.appointment.findUnique({ where: { id } });
+      if (!current) throw new NotFoundError('Agendamento', id);
 
-    const updated = new Appointment(
-      existing.id, existing.serviceId, existing.customerName, existing.customerPhone,
-      existing.startsAt, existing.endsAt, existing.priceCents,
-      status as AppointmentStatus, existing.previousStartsAt,
-      existing.createdAt, new Date()
-    );
+      if (current.status === status) {
+        return new Appointment(
+          current.id, current.serviceId, current.customerName, current.customerPhone,
+          new Date(current.startsAt), new Date(current.endsAt), current.priceCents,
+          current.status, current.previousStartsAt ? new Date(current.previousStartsAt) : null,
+          new Date(current.createdAt), new Date(current.updatedAt),
+        );
+      }
 
-    return this.appointmentRepo.update(updated);
+      // Re-check transitions into an occupying status under the same schedule
+      // lock used by booking and rescheduling.
+      if (OCCUPYING_STATUSES.includes(status as AppointmentStatus)) {
+        const conflicts = await tx.appointment.findMany({
+          where: {
+            id: { not: id },
+            startsAt: { lt: current.endsAt },
+            endsAt: { gt: current.startsAt },
+            status: { in: OCCUPYING_STATUSES as any },
+          },
+        });
+        if (conflicts.length > 0) throw new ConflictError();
+      }
+
+      const updated = await tx.appointment.update({
+        where: { id },
+        data: { status: status as any, updatedAt: new Date() },
+      });
+
+      const result = new Appointment(
+        updated.id, updated.serviceId, updated.customerName, updated.customerPhone,
+        new Date(updated.startsAt), new Date(updated.endsAt), updated.priceCents,
+        updated.status, updated.previousStartsAt ? new Date(updated.previousStartsAt) : null,
+        new Date(updated.createdAt), new Date(updated.updatedAt)
+      );
+      await this.reminderScheduler.sync(tx, result);
+      return result;
+    });
   }
 }

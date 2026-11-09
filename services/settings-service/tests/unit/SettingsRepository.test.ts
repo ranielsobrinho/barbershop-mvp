@@ -46,7 +46,7 @@ describe('PrismaSettingsRepository', () => {
 
       expect(mockFindFirst).toHaveBeenCalled();
       expect(mockCreate).toHaveBeenCalledWith({
-        data: { id: 'default', minNoticeHours: 2, maxDaysAhead: 60, heroText: null, heroImageUrl: null },
+        data: { id: 'default', companyName: 'Seu Carlos Barbearia', minNoticeHours: 2, maxDaysAhead: 60, heroText: null, heroImageUrl: null },
       });
       expect(result.minNoticeHours).toBe(2);
       expect(result.maxDaysAhead).toBe(60);

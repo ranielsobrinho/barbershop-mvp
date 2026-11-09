@@ -26,6 +26,9 @@ export interface WhatsAppIntegration {
   messageConfirmed: string | null;
   messageCancelled: string | null;
   messageRescheduled: string | null;
+  reminderEnabled: boolean;
+  reminderHoursBefore: number;
+  messageReminder: string | null;
 }
 
 export interface WhatsAppIntegrationUpdate {
@@ -37,6 +40,22 @@ export interface WhatsAppIntegrationUpdate {
   messageConfirmed?: string;
   messageCancelled?: string;
   messageRescheduled?: string;
+  reminderEnabled?: boolean;
+  reminderHoursBefore?: number;
+  messageReminder?: string;
+}
+
+export type AppointmentReminderStatus = 'PENDING' | 'PROCESSING' | 'SENT' | 'FAILED' | 'CANCELLED';
+export interface AppointmentReminder {
+  id: string;
+  status: AppointmentReminderStatus;
+  scheduledAt: string;
+  nextAttemptAt: string;
+  attemptCount: number;
+  lastAttemptAt: string | null;
+  sentAt: string | null;
+  providerResponseCode: number | null;
+  lastError: string | null;
 }
 
 export const adminApi = {
@@ -120,5 +139,13 @@ export const adminApi = {
   updateWhatsAppIntegration: async (payload: WhatsAppIntegrationUpdate): Promise<WhatsAppIntegration> => {
     const { data } = await api.put('/api/admin/whatsapp-integration', payload);
     return data.integration;
+  },
+  getAppointmentReminder: async (appointmentId: string): Promise<AppointmentReminder | null> => {
+    const { data } = await api.get(`/api/admin/appointments/${appointmentId}/reminder`);
+    return data.reminder;
+  },
+  retryAppointmentReminder: async (appointmentId: string): Promise<AppointmentReminder> => {
+    const { data } = await api.post(`/api/admin/appointments/${appointmentId}/reminder/retry`);
+    return data.reminder;
   },
 };

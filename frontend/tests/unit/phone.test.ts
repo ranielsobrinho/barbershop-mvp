@@ -50,6 +50,10 @@ describe('phone utils', () => {
       expect(isValidPhone('(11) 98765-4321')).toBe(true);
     });
 
+    it('retorna false para celular sem nono dígito após o DDD', () => {
+      expect(isValidPhone('85123456789')).toBe(false);
+    });
+
     it('retorna false para menos de 10 dígitos', () => {
       expect(isValidPhone('119876543')).toBe(false);
       expect(isValidPhone('')).toBe(false);
