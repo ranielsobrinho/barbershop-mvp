@@ -227,6 +227,19 @@ For request/response details, see the route handlers under each service's `src/i
 
 These credentials are defined in `shared/prisma/seed.ts` for local development. Change or remove them before using any non-development environment. The seed also creates Corte, Barba, Corte + Barba, and Sobrancelha services, along with weekday/Saturday business hours and default booking-window settings.
 
+## WhatsApp appointment reminders
+
+Reminders are optional and disabled by default. Without a configured provider, bookings and the rest of the application continue to work; no reminder is sent. To enable them:
+
+1. Set `WHATSAPP_ENCRYPTION_KEY` to 32 random bytes encoded as 64 hexadecimal characters. Keep this key stable while encrypted provider credentials are stored in the database.
+2. Set the same random `WHATSAPP_INTERNAL_SECRET` in the scheduling and settings services. It protects the internal reminder-delivery endpoint and should not be exposed to the browser or public gateway.
+3. Sign in to `/painel`, open **Configurações → Integração WhatsApp**, choose Wame or Zapster, and enter the provider credentials. Wame needs its instance API key; Zapster needs its bearer token and instance ID. Credentials are encrypted before storage and are not returned by the settings API.
+4. Enable reminders, choose a lead time from 1 to 168 hours, optionally edit the reminder template, and save. Supported template variables are `{nome}`, `{servico}`, `{data}`, `{hora}`, and `{valor}`. An empty template uses the built-in Portuguese message.
+
+The scheduling service checks for due reminders every 30 seconds. Delivery failures are retried up to five attempts with bounded exponential backoff. The admin appointment view shows the latest state and permits a manual retry after a terminal failure. Provider setup references: [Wame REST API](https://wame.api.br/docs/api) and [Zapster API](https://zapsterapi.com/).
+
+**Delivery guarantee:** the database prevents concurrent workers from claiming the same reminder, and retries reuse its idempotency key inside this application. The current Wame and Zapster send adapters do not submit that key as a provider idempotency token. If a provider accepts a message but the response times out, a retry may deliver a duplicate. The admin state reflects the response observed by this app, not final WhatsApp delivery/read status.
+
 ## Booking rules
 
 - Booking dates use the `America/Fortaleza` business timezone.

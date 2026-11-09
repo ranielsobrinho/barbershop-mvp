@@ -69,7 +69,7 @@ No video and no scrub. Five device families are present on desktop: pin, kinetic
 
 ## Generated
 
-- No AI images or footage (`KIE_AI_API_KEY` is not set). The hero uses the admin `heroImageUrl` when configured; otherwise it is the CSS plate, barber poles and `SC` seal.
+- No AI images or footage (`KIE_AI_API_KEY` is not set). The hero uses the admin `heroImageUrl` when configured; otherwise it is the CSS plate and barber poles.
 - Generated in code: the paper ficha, the perforation edge, the stamp, the calendar, the favicon, the barber-pole stripes and the grain.
 
 ## Verified

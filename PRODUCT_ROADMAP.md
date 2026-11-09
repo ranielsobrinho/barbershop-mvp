@@ -18,28 +18,34 @@ The repository already includes public booking, an admin panel, service and sche
 
 ## Phases
 
-### Phase 0 — Publish a reliable portfolio demo (S)
+### Phase 0 — Deploy a reliable AWS demo with Terraform (L)
 
 **Why:** A reviewer or prospective shop owner needs to open the app and complete the booking flow quickly. A live demo makes the existing work visible.
 
 **Work**
 
 - [ ] Fix and verify the calendar weekday/time-zone issue recorded in `TODO.md` for `America/Fortaleza`.
+- [ ] Define the AWS deployment in Terraform: network, ECS cluster, ECR, RDS PostgreSQL, load balancer, service discovery, IAM roles, secrets, and logs.
+- [ ] Run the Terraform configuration against Floci first, using its local endpoint and only the AWS services enabled in the local instance. Confirm this stage cannot target the real AWS account.
+- [ ] Build and run separate ECS services for the API gateway and each backend (auth, scheduling, services, blocks, business-hours, and settings), plus the production web entry point.
+- [ ] Build the React admin panel and serve it with the static landing page through `server.mjs` without Vite; expose only the public web service.
+- [ ] Add a one-shot database migration task, health checks, and verify the public health route, booking flow, and admin login against PostgreSQL.
+- [ ] After Floci validation, use the same Terraform configuration with AWS endpoints and production secrets to deploy the demo to AWS.
 - [ ] Choose a single public demo URL and provide seeded, clearly fictional data.
-- [ ] Create a production Compose configuration: build the frontend, serve `frontend/dist` through `server.mjs` (without Vite), publish only the landing/proxy port, and keep the gateway and internal services private.
-- [ ] Add production health checks and confirm the public health route and complete customer booking/admin login path work against PostgreSQL.
 - [ ] Add a short demo guide to README: URL, demo credentials, features to try, known limitations, and architecture diagram.
 - [ ] Add screenshots or a short screen recording and a clear “demo data is resettable” note.
-- [ ] Set a spend limit / billing alert with the host, and verify the VM remains on free-eligible resources.
+- [ ] Set AWS budget alerts and document expected monthly cost for the demo resources before applying Terraform.
 
 **Acceptance**
 
+- Terraform creates and destroys the required local Floci resources without requests reaching a real AWS account.
+- Each backend can be deployed and scaled as an independent ECS service; the public web service reaches the gateway and internal services privately.
 - A clean browser can open the public landing page and complete a booking.
 - Admin login can confirm, reschedule, and cancel a booking.
 - Restarting the app preserves database data; redeploying does not expose internal service ports.
-- README has copy-pasteable setup steps and truthful demo limitations.
+- README has copy-pasteable Floci validation and AWS deployment steps, plus truthful demo limitations.
 
-**Demo hosting recommendation:** Oracle Cloud Infrastructure Always Free compute VM + Docker Compose + Caddy for HTTPS + DuckDNS for a free hostname. This fits the existing multi-container architecture better than a static-only host. Free availability is subject to Oracle account/region capacity; the account console labels resources that qualify. See deployment runbook below.
+**Deployment approach:** AWS ECS with one service per backend, separate gateway and production web services, RDS PostgreSQL, and Terraform-managed infrastructure. Validate against Floci before using AWS. Emulator success does not replace an AWS smoke test or review of current pricing and service limits.
 
 ### Phase 1 — Booking flow correctness and trust (S)
 
@@ -71,12 +77,12 @@ The repository already includes public booking, an admin panel, service and sche
 - [x] Add a worker/periodic job that claims due reminders safely and retries transient provider failures with backoff.
 - [x] Cancel or supersede pending reminders when an appointment is cancelled or rescheduled.
 - [x] Show delivery state and a manual retry action in the appointment admin view.
-- [ ] Add tests for due-time calculation, retry, duplicate prevention, cancellation/reschedule, and provider errors.
-- [ ] Document provider setup and make the feature clearly optional when no provider is configured.
+- [x] Add tests for due-time calculation, retry, duplicate prevention, cancellation/reschedule, and provider errors.
+- [x] Document provider setup and make the feature clearly optional when no provider is configured.
 
 **Acceptance**
 
-- One confirmed appointment produces at most one successful reminder per configured reminder time.
+- The outbox creates one reminder per configured reminder time and only one worker can claim it at a time. Provider-level at-most-once delivery cannot be guaranteed unless the provider supports idempotency; see the README delivery guarantee.
 - Cancelled/rescheduled bookings do not receive stale reminders.
 - A failed provider request is visible and safely retryable; secrets never appear in logs or API responses.
 
@@ -135,6 +141,26 @@ The repository already includes public booking, an admin panel, service and sche
 - Two barbers can accept overlapping appointments without conflict, while one barber cannot be double-booked.
 - Every admin and public API query is scoped to the correct shop and barber.
 
+### Phase 6 — Load testing and capacity validation (M)
+
+**Why:** Measure the independent ECS services under load to find bottlenecks and make scaling decisions based on observed behavior.
+
+**Work**
+
+- [ ] Add a repeatable load-test script (for example, k6) with configurable base URL, duration, ramp-up, request rate, and virtual-user ceiling.
+- [ ] Cover representative public flows: health, service listing, availability lookup, and appointment creation with disposable data; keep admin/auth load separate.
+- [ ] Include staged profiles for hundreds of requests per second and an opt-in higher profile reaching thousands per second, with explicit duration and hard limits.
+- [ ] Capture latency percentiles, achieved throughput, error rate, and relevant ECS/RDS resource metrics; record environment, dataset, and profile for each run.
+- [ ] Run only against an isolated Floci/local or dedicated AWS test environment, never the production/demo URL; document test-data cleanup/reset.
+- [ ] Use results to identify bottlenecks and recommend ECS scaling thresholds; do not apply unvalidated thresholds to production.
+
+**Acceptance**
+
+- A documented command runs baseline and higher-rate profiles against an explicitly selected test URL.
+- The script reports latency percentiles, achieved requests per second, and failures, and exits nonzero when thresholds are exceeded.
+- Runs use disposable data and cannot silently target production.
+- Results identify the first constrained component and include a scaling recommendation.
+
 ### Later product experiments (after the phases above)
 
 - Deposits/prepayment and cancellation policies through a payment provider; do not store card data yourself.
@@ -144,53 +170,51 @@ The repository already includes public booking, an admin panel, service and sche
 - PWA installability and customer self-service cancellation/rescheduling links.
 - Multiple shops/tenants and subscription billing only after the single-shop product is validated with real barbers.
 
-## Free demo deployment runbook
+## Floci and AWS deployment runbook
 
-This is for a portfolio/demo environment, not a business that depends on uninterrupted availability. Oracle describes Always Free compute for small apps and proof-of-concept use, but regional capacity can prevent provisioning. Render's free Postgres is unsuitable for a lasting demo because it expires after 30 days; free web services also sleep when idle. See source links at the end of this document and recheck current terms before deployment.
+Use Floci to validate Terraform and container orchestration locally, then deploy the same resource definitions to AWS after reviewing the plan and production configuration. Floci is an emulator; verify AWS-specific networking, IAM, TLS, availability, and billing behavior in a controlled AWS deployment.
 
 ### A. Prepare the repository
 
-1. Push the project to a public GitHub repository. Remove real credentials and private customer data first; keep `.env` ignored.
-2. Complete Phase 0's production Compose work. The checked-in Compose file currently starts Vite and the landing proxy in `--dev` mode; it is a development stack and should not be exposed as the public demo.
-3. Ensure only the public entry point (port 8080) is published. Do not publish PostgreSQL, gateway, gRPC, or internal service ports to the internet.
-4. Configure the public URL / cookie settings to use HTTPS and the chosen hostname. Confirm cookie `Secure` and same-site behavior with the deployed origin.
-5. Make the seed explicitly demo-only and change its default password before exposing the demo. Prefer a read-only walkthrough account if the application supports one.
+1. Keep real credentials and private customer data out of source control; keep `.env` ignored.
+2. Add a production image target that builds the React frontend and runs `server.mjs` without Vite. The checked-in Compose file starts the development frontend and landing proxy in `--dev` mode.
+3. Configure an isolated Floci Terraform endpoint using the local test credentials from `floci env`; verify endpoint overrides against the installed Terraform AWS provider version.
+4. Define ECS and ECR, RDS PostgreSQL, private service discovery, load balancing, security groups, task roles, secrets, and logs in Terraform.
+5. Expose only the public web entry point. Keep PostgreSQL, gateway, gRPC, and internal service ports private.
+6. Configure HTTPS and cookie settings for AWS. Make the seed explicitly demo-only and replace its default password before exposure.
 
-### B. Create the free VM
+### B. Validate against Floci
 
-1. Create an OCI account and choose an Always Free eligible Ampere A1 VM in the account's home region. A small multi-core A1 VM is the relevant option; resource capacity is not guaranteed in every region.
-2. Use Ubuntu, attach the allowed boot volume, add an SSH public key, and reserve a public IP if available within free limits.
-3. Configure cloud ingress and the VM firewall for SSH (restrict to your IP where possible) and HTTP/HTTPS (80/443). Do not open app ports 3000–8080 directly.
-4. Install Docker Engine and the Docker Compose plugin using the official Ubuntu Docker instructions. Log out/in if needed for Docker group membership.
-5. Clone the repository to the VM and create a production `.env` with long random values for `POSTGRES_PASSWORD`, `JWT_SECRET`, `COOKIE_SECRET`, `WHATSAPP_ENCRYPTION_KEY`, and `WHATSAPP_INTERNAL_SECRET`. Leave WhatsApp provider credentials unset for the demo unless you intentionally configure them. Never commit or paste secrets into screenshots.
+1. Start Floci and confirm `ecs`, `ecr`, `rds`, `elasticloadbalancing`, `servicediscovery`, `iam`, `secretsmanager`, and `logs` are enabled.
+2. Build and publish the app image to Floci ECR, or use a local image URI only where the Floci ECS workflow supports it.
+3. Run Terraform plan/apply with the Floci endpoint, run the migration task, and inspect ECS health, task logs, and the public web entry point.
+4. Exercise booking/admin flows with disposable data and confirm teardown is scoped to the Floci workspace.
+5. Record emulator gaps; do not treat Floci success as proof of AWS behavior.
 
-### C. DNS and HTTPS
+### C. Deploy the same configuration to AWS
 
-1. Create a free DuckDNS subdomain and point it to the VM public IP; set up its IP updater if the address is not reserved.
-2. Run Caddy as the public reverse proxy on ports 80/443, forwarding the hostname to the app's internal port 8080. Caddy can obtain and renew a TLS certificate automatically when DNS and inbound ports are correct.
-3. Put Caddy and the app on the same Docker network. Only Caddy should publish ports 80 and 443; publish 8080 only on localhost or keep it un-published and proxy to the container network.
-4. Test the HTTPS landing page, `/painel`, `/api/health`, login cookie, booking submission, and browser console from a clean/incognito session.
+1. Select a region and review current ECS, RDS, load balancer, networking, and logging costs before applying.
+2. Use a least-privilege AWS deployment identity and load production secrets from Secrets Manager; never reuse Floci test credentials.
+3. Run `terraform plan`, review every change, and apply with AWS state and variables separate from Floci.
+4. Push a versioned image, run migrations as a one-shot ECS task, and roll out web, gateway, and backend services.
+5. Configure the public hostname and HTTPS; test landing, `/painel`, API health, login cookie, booking flow, and browser behavior.
 
 ### D. Run, update, and back up
 
-- Start with the production compose file, for example `docker compose -f docker-compose.prod.yml up -d --build` (create this file as part of Phase 0).
-- Inspect `docker compose ps` and `docker compose logs --tail=100` after startup. Confirm database migration/seed completed successfully.
-- For a code update: `git pull`, then `docker compose -f docker-compose.prod.yml up -d --build`.
-- Create an on-demand database dump before migrations or demo resets. Keep a copy outside the VM; demo data should be treated as disposable.
-- Check OCI budget/cost controls and usage periodically. Keep all resources within the Always Free labels; stop/delete anything that is not eligible.
-- If Oracle capacity is unavailable, publish a static, interactive UI preview separately and use a short-lived hosted backend only for a time-boxed demo. Do not describe a sleeping or expiring free deployment as production-ready.
+- Inspect ECS task health and CloudWatch logs after rollout; confirm migration/seed completion before serving traffic.
+- For updates, build and push a versioned image, review the Terraform plan, apply, and verify ECS deployment stability.
+- Back up RDS before migrations or demo resets; treat demo data as disposable.
+- Set AWS budget alerts and review costs. Destroy Floci resources after tests when persistence is unnecessary; select the Floci state before any `terraform destroy`.
 
 ## Progress log
 
 - 2026-10-27: Roadmap captured from the current repository and product research. Phase 0 is the first implementation target.
 - 2026-10-30: Phase 1 implementation completed and verified: booking checks run atomically under a PostgreSQL advisory lock, overlapping service durations serialize, timezone/date regression coverage is present, and the booking UI exposes recovery states. The live concurrency integration check previously passed against an isolated database.
 - 2026-10-30: Phase 2 implementation started: configurable reminder settings, durable outbox schema, scheduler/worker with leased claims and exponential retries, cancellation on status changes/reschedules, and admin status/retry UI are in place. The local migration is applied. Provider-backed delivery tests, setup documentation, and duplicate-delivery behavior across provider/network timeouts remain open; the external providers' idempotency support has not been verified.
+- 2026-11-03: Deployment direction updated to AWS ECS with independently scalable backend services; Terraform will be tested against the user's Floci instance before AWS. Added a load-testing phase for isolated, staged hundreds-to-thousands RPS profiles.
+- 2026-11-09: Phase 2 implementation complete. Tests cover SKIP LOCKED claims, concurrent poll coalescing, retry scheduling, stale appointment cancellation, disabled-provider behavior, and reschedule replacement. README documents setup and optional use. Delivery is at-least-once across ambiguous provider/network timeouts: the Wame and Zapster adapters do not currently pass a provider idempotency token, so duplicate external delivery remains possible in that failure window.
 
 ## Sources checked 2026-10-27
 
-- Oracle Always Free resource list and capacity notes: https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm
-- Oracle Always Free FAQ: https://www.oracle.com/cloud/free/faq/
-- Render free-tier limitations (including idle spin-down and 30-day Postgres expiry): https://render.com/docs/free
-- Render private network limitations: https://render.com/docs/private-network
 - Booksy barber product positioning (online booking and reminders): https://biz.booksy.com/who-loves-us/barber
 - Technical portfolio guide (working project, documentation, communication): https://cdn.uconnectlabs.com/wp-content/uploads/sites/139/2025/07/TechnicalPortfolioGuide_UPDATED2026.pdf

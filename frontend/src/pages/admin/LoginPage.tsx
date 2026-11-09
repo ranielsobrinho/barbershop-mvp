@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useToast } from '../../contexts/ToastContext';
 import { ErrorAlert } from '../../components/ui/ErrorAlert';
 
 export function LoginPage() {
@@ -9,6 +10,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const { showToast } = useToast();
   const navigate = useNavigate();
 
   const handleSubmit = async (e: FormEvent) => {
@@ -17,9 +19,12 @@ export function LoginPage() {
     setLoading(true);
     try {
       await login(email, password);
+      showToast('Login realizado com sucesso.');
       navigate('/admin');
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Credenciais inválidas');
+      const message = err.response?.data?.message || 'Credenciais inválidas';
+      setError(message);
+      showToast(message, 'error');
     } finally {
       setLoading(false);
     }

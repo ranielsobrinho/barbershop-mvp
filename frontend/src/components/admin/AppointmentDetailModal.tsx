@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { DateInput } from '../ui/DateInput';
 import { StatusBadge } from '../ui/Badge';
@@ -7,6 +7,7 @@ import { formatMoney } from '../../utils/money';
 import { formatBusinessFullDate, formatBusinessTime, getBusinessCalendarDate, toDateString } from '../../utils/date';
 import { parseDateInput } from '../../utils/dateInput';
 import { STATUS_LABELS } from '../../utils/constants';
+import { useToast } from '../../contexts/ToastContext';
 import type { Appointment } from '../../services/publicApi';
 
 interface Props {
@@ -15,6 +16,7 @@ interface Props {
 }
 
 export function AppointmentDetailModal({ appointment, onClose }: Props) {
+  const { showToast } = useToast();
   const updateStatus = useUpdateStatus();
   const reschedule = useReschedule();
   const reminderQuery = useAppointmentReminder(appointment?.id ?? null);
@@ -27,6 +29,10 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
   const newDateIso = parseDateInput(newDate);
   const minDate = toDateString(getBusinessCalendarDate(new Date()));
 
+  useEffect(() => {
+    if (reminderQuery.isError) showToast('Não foi possível carregar o status do lembrete.', 'error');
+  }, [reminderQuery.isError, showToast]);
+
   if (!appointment) return null;
 
   const digits = appointment.customerPhone.replace(/\D/g, '');
@@ -38,24 +44,32 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
     setError(null);
     try {
       await updateStatus.mutateAsync({ id: appointment.id, status });
+      showToast(`Status do agendamento atualizado: ${STATUS_LABELS[status] || status}.`);
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao alterar status');
+      const message = err.response?.data?.message || 'Erro ao alterar status';
+      setError(message);
+      showToast(message, 'error');
     }
   };
 
   const handleReschedule = async () => {
     if (!newDateIso || !newTime || newDateIso < minDate) {
-      setError('Informe uma data válida a partir de hoje no formato DD/MM/AAAA e um horário.');
+      const message = 'Informe uma data válida a partir de hoje no formato DD/MM/AAAA e um horário.';
+      setError(message);
+      showToast(message, 'error');
       return;
     }
     setError(null);
     try {
       const d = new Date(`${newDateIso}T${newTime}:00-03:00`);
       await reschedule.mutateAsync({ id: appointment.id, newStartsAt: d.toISOString() });
+      showToast('Agendamento reagendado com sucesso.');
       onClose();
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Erro ao reagendar');
+      const message = err.response?.data?.message || 'Erro ao reagendar';
+      setError(message);
+      showToast(message, 'error');
     }
   };
 
@@ -64,8 +78,11 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
     setReminderError(null);
     try {
       await retryReminder.mutateAsync(appointment.id);
+      showToast('Nova tentativa de envio do lembrete agendada.');
     } catch (err: any) {
-      setReminderError(err.response?.data?.message || 'Não foi possível agendar uma nova tentativa.');
+      const message = err.response?.data?.message || 'Não foi possível agendar uma nova tentativa.';
+      setReminderError(message);
+      showToast(message, 'error');
     }
   };
 

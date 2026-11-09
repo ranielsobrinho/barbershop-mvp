@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { adminApi, Service } from '../../services/adminApi';
 import { formatMoney, sanitizePriceInput } from '../../utils/money';
 import { Spinner } from '../../components/ui/Spinner';
 import { ErrorAlert } from '../../components/ui/ErrorAlert';
 import { Modal } from '../../components/ui/Modal';
+import { useToast } from '../../contexts/ToastContext';
 
 export function ServicesPage() {
+  const { showToast } = useToast();
   const qc = useQueryClient();
   const { data: services = [], isLoading, error } = useQuery({ queryKey: ['services'], queryFn: adminApi.listServices });
   const [editing, setEditing] = useState<Service | null>(null);
@@ -20,6 +22,10 @@ export function ServicesPage() {
   const [slotMin, setSlotMin] = useState('30');
   const [active, setActive] = useState(true);
 
+  useEffect(() => {
+    if (error) showToast('Erro ao carregar serviços.', 'error');
+  }, [error, showToast]);
+
   const saveMutation = useMutation({
     mutationFn: async () => {
       const payload = {
@@ -32,19 +38,41 @@ export function ServicesPage() {
       if (editing) return adminApi.updateService(editing.id, payload);
       return adminApi.createService(payload);
     },
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['services'] }); closeForm(); },
-    onError: (err: any) => setFormError(err.response?.data?.message || 'Erro ao salvar'),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['services'] });
+      showToast(editing ? 'Serviço atualizado com sucesso.' : 'Serviço cadastrado com sucesso.');
+      closeForm();
+    },
+    onError: (err: any) => {
+      const message = err.response?.data?.message || 'Erro ao salvar serviço.';
+      setFormError(message);
+      showToast(message, 'error');
+    },
   });
 
   const toggleMutation = useMutation({
     mutationFn: ({ id, active }: { id: string; active: boolean }) => adminApi.updateService(id, { active }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['services'] }),
+    onSuccess: (_result, variables) => {
+      qc.invalidateQueries({ queryKey: ['services'] });
+      if (variables.active) showToast('Serviço ativado.');
+      else showToast('Serviço desativado e removido de novos agendamentos.', 'warning');
+    },
+    onError: (err: any) => showToast(err.response?.data?.message || 'Erro ao alterar o serviço.', 'error'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => adminApi.deleteService(id),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['services'] }); setDeleteTarget(null); },
-    onError: (err: any) => { setFormError(err.response?.data?.message || 'Erro ao excluir'); setDeleteTarget(null); },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['services'] });
+      setDeleteTarget(null);
+      showToast('Serviço excluído com sucesso.');
+    },
+    onError: (err: any) => {
+      const message = err.response?.data?.message || 'Erro ao excluir serviço.';
+      setFormError(message);
+      setDeleteTarget(null);
+      showToast(message, 'error');
+    },
   });
 
   const openCreate = () => {
@@ -59,9 +87,9 @@ export function ServicesPage() {
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
-    if (!name.trim()) { setFormError('Nome é obrigatório'); return; }
-    if (!price || isNaN(parseFloat(price.replace(',', '.')))) { setFormError('Preço inválido'); return; }
-    if (!slotMin || parseInt(slotMin) <= 0) { setFormError('Duração inválida'); return; }
+    if (!name.trim()) { setFormError('Nome é obrigatório'); showToast('Nome é obrigatório.', 'error'); return; }
+    if (!price || isNaN(parseFloat(price.replace(',', '.')))) { setFormError('Preço inválido'); showToast('Preço inválido.', 'error'); return; }
+    if (!slotMin || parseInt(slotMin) <= 0) { setFormError('Duração inválida'); showToast('Duração inválida.', 'error'); return; }
     saveMutation.mutate();
   };
 

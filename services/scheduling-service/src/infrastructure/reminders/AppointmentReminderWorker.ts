@@ -37,7 +37,8 @@ export class AppointmentReminderWorker {
     await this.inFlight;
   }
 
-  private runOnce(): Promise<void> {
+  /** Process one batch; public so the worker can also be driven deterministically in tests. */
+  runOnce(): Promise<void> {
     if (this.inFlight) return this.inFlight;
     this.inFlight = this.processDue().finally(() => { this.inFlight = null; });
     return this.inFlight;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MonthlyCalendar } from '../../components/admin/MonthlyCalendar';
 import { AppointmentDetailModal } from '../../components/admin/AppointmentDetailModal';
 import { Spinner } from '../../components/ui/Spinner';
@@ -7,14 +7,20 @@ import { useAppointmentsByMonth } from '../../hooks/useAppointments';
 import { useBlocks } from '../../hooks/useBlocks';
 import { formatBusinessTime, getBusinessCalendarDate, getBusinessMonthStart, monthString, MONTHS, addMonths, subMonths } from '../../utils/date';
 import type { Appointment } from '../../services/publicApi';
+import { useToast } from '../../contexts/ToastContext';
 
 export function CalendarPage() {
+  const { showToast } = useToast();
   const [currentMonth, setCurrentMonth] = useState(() => getBusinessMonthStart());
   const [selected, setSelected] = useState<Appointment | null>(null);
   const month = monthString(currentMonth);
 
   const { data: appointments = [], isLoading, error } = useAppointmentsByMonth(month);
   const { data: blocks = [] } = useBlocks(month);
+
+  useEffect(() => {
+    if (error) showToast('Erro ao carregar agendamentos.', 'error');
+  }, [error, showToast]);
 
   return (
     <div>
