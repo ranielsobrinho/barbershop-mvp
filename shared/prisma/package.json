@@ -5,6 +5,7 @@
   "types": "index.ts",
   "scripts": {
     "db:generate": "prisma generate",
+    "lint": "prisma validate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",

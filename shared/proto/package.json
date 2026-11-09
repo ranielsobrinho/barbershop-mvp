@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "scripts": {
+    "lint": "grpc_tools_node_protoc --proto_path=. --descriptor_set_out=/dev/null --include_imports *.proto",
     "proto:generate": "mkdir -p ../types/generated && grpc_tools_node_protoc --proto_path=. --plugin=protoc-gen-ts_proto=$PWD/node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=../types/generated --ts_proto_opt=outputServices=grpc-js,esModuleInterop=true,env=node,importSuffix=.js *.proto"
   },
   "devDependencies": {
