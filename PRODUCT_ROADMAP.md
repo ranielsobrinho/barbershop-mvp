@@ -92,13 +92,13 @@ The repository already includes public booking, an admin panel, service and sche
 
 **Work**
 
-- [ ] Introduce a `Customer` entity keyed by normalized phone number; migrate existing appointment name/phone data without losing history.
-- [ ] Keep an appointment's customer relationship while preserving a snapshot of the name/phone used at booking for historical accuracy.
-- [ ] Add an admin customer list with search by name/phone, last visit, visit count, and next appointment.
-- [ ] Add a customer detail view with chronological appointment history and service totals.
-- [ ] Add “book again” to preselect the prior service while still requiring the client/shop to choose an available date and time.
-- [ ] Add privacy/data-retention handling and document deletion/export behavior suitable for the intended Brazilian market before real customer rollout.
-- [ ] Add API and UI tests for phone normalization, duplicate merging, history, search, and rebooking.
+- [x] Introduce a `Customer` entity keyed by normalized phone number; migrate existing appointment name/phone data without losing history.
+- [x] Keep an appointment's customer relationship while preserving a snapshot of the name/phone used at booking for historical accuracy.
+- [x] Add an admin customer list with search by name/phone, last visit, visit count, and next appointment.
+- [x] Add a customer detail view with chronological appointment history and service totals.
+- [x] Add “book again” to select a service, date, and current available time in a rebooking modal.
+- [x] Add privacy/data-retention handling and document deletion/export behavior suitable for the intended Brazilian market before real customer rollout.
+- [x] Add API and UI tests for phone normalization, duplicate merging, history, search, and rebooking.
 
 **Acceptance**
 
@@ -108,20 +108,22 @@ The repository already includes public booking, an admin panel, service and sche
 
 ### Phase 4 — Shop performance dashboard (M)
 
+**Progress (2026-11-10):** Complete. The dashboard has unrestricted DD/MM/YYYY date inputs, status/value summaries with explicit definitions, weekday/hour/service charts, equivalent previous-period comparison, and CSV export. PostgreSQL calculates the aggregates in the barbershop timezone. Appointment value is explicitly not represented as received revenue because payment state does not exist. PostgreSQL integration coverage validates cancellation/reschedule accounting, date boundaries, empty periods, and a hand-calculated sample.
+
 **Why:** Owners want a quick answer to “how is the shop doing?” Existing appointment status, timestamps, and stored prices support a useful first report.
 
 **Work**
 
-- [ ] Add date-range filters with a clear shop timezone.
-- [ ] Show booked, completed, cancelled, and awaiting-confirmation counts; distinguish revenue from appointment value and only count completed/paid services as collected revenue once payment state exists.
-- [ ] Add charts for bookings by weekday/time and service mix; include accessible text summaries.
-- [ ] Add date-range comparison and CSV export after the underlying metric definitions are documented.
-- [ ] Add tests for canceled/rescheduled appointment accounting, date boundaries, and empty periods.
+- [x] Add date-range filters with a clear shop timezone.
+- [x] Show booked, completed, cancelled, and awaiting-confirmation counts; distinguish revenue from appointment value and only count completed/paid services as collected revenue once payment state exists.
+- [x] Add charts for bookings by weekday/time and service mix; include accessible text summaries.
+- [x] Add date-range comparison and CSV export after the underlying metric definitions are documented.
+- [x] Add tests for canceled/rescheduled appointment accounting, date boundaries, and empty periods.
 
 **Acceptance**
 
-- Every metric has a visible definition and matches a hand-calculated sample dataset.
-- Changing the date range updates every visualization and export consistently.
+- [x] Every metric has a visible definition and matches a hand-calculated sample dataset.
+- [x] Changing the date range updates every visualization and export consistently.
 
 ### Phase 5 — Multiple barbers and per-barber availability (L)
 
@@ -213,6 +215,9 @@ Use Floci to validate Terraform and container orchestration locally, then deploy
 - 2026-10-30: Phase 2 implementation started: configurable reminder settings, durable outbox schema, scheduler/worker with leased claims and exponential retries, cancellation on status changes/reschedules, and admin status/retry UI are in place. The local migration is applied. Provider-backed delivery tests, setup documentation, and duplicate-delivery behavior across provider/network timeouts remain open; the external providers' idempotency support has not been verified.
 - 2026-11-03: Deployment direction updated to AWS ECS with independently scalable backend services; Terraform will be tested against the user's Floci instance before AWS. Added a load-testing phase for isolated, staged hundreds-to-thousands RPS profiles.
 - 2026-11-09: Phase 2 implementation complete. Tests cover SKIP LOCKED claims, concurrent poll coalescing, retry scheduling, stale appointment cancellation, disabled-provider behavior, and reschedule replacement. README documents setup and optional use. Delivery is at-least-once across ambiguous provider/network timeouts: the Wame and Zapster adapters do not currently pass a provider idempotency token, so duplicate external delivery remains possible in that failure window.
+- 2026-11-10: Phase 3 implementation started. Added normalized Customer records and appointment links with snapshots, migration/backfill and duplicate-phone merge, authenticated customer search/history/export/identity-erasure endpoints, admin customer directory, and rebooking that carries the prior active service into the public flow while fetching current availability. Privacy/retention policy decisions and the phase's automated coverage remain open; implementation has not been run through the workspace checks yet.
+- 2026-11-10: Phase 3 complete. Applied the customer-history migration to the local PostgreSQL database and confirmed all 5 existing appointments are linked. Added a documented manual retention/export/erasure policy, admin customer API/UI, rebooking modal for service/date/available time, and a paged streamed CSV report with Portuguese headings, no internal IDs, and BRL amounts. Workspace lint and the full suite passed.
+- 2026-11-10: Phase 4 complete. Added shop-timezone date-range reporting with comparison, status/value definitions, accessible weekday/hour/service charts, and CSV export. PostgreSQL aggregates keep appointment rows in the database; integration tests verify a hand-calculated status/value sample, Fortaleza day boundaries, reschedules/cancellations, and empty periods. Full workspace suite passed (17 tasks).
 
 ## Sources checked 2026-10-27
 

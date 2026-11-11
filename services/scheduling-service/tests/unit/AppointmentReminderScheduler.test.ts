@@ -27,13 +27,14 @@ describe('appointment reminders', () => {
   });
 
   it('does not create reminders for cancelled or disabled appointments', async () => {
+    const now = new Date('2026-11-09T18:00:00.000Z');
     const tx = {
       appointmentReminder: { updateMany: vi.fn(), create: vi.fn() },
       whatsAppIntegration: { findUnique: vi.fn().mockResolvedValue({ reminderEnabled: false, reminderHoursBefore: 24 }) },
     };
     const scheduler = new AppointmentReminderScheduler();
-    await scheduler.sync(tx, appointment('CANCELADO'));
-    await scheduler.sync(tx, appointment());
+    await scheduler.sync(tx, appointment('CANCELADO'), now);
+    await scheduler.sync(tx, appointment(), now);
     expect(tx.appointmentReminder.create).not.toHaveBeenCalled();
     expect(tx.whatsAppIntegration.findUnique).toHaveBeenCalledTimes(1);
   });

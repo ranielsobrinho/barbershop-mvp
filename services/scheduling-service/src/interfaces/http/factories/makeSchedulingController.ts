@@ -15,6 +15,8 @@ import { PrismaSettingsRepository } from '../../../infrastructure/repositories/P
 import { PrismaAppointmentReminderRepository } from '../../../infrastructure/repositories/PrismaAppointmentReminderRepository.js';
 import { AppointmentReminderAdminUseCase } from '../../../usecases/AppointmentReminderAdminUseCase.js';
 import { AppointmentReminderScheduler } from '../../../usecases/AppointmentReminderScheduler.js';
+import { CustomerAdminUseCase } from '../../../usecases/CustomerAdminUseCase.js';
+import { PerformanceDashboardUseCase } from '../../../usecases/PerformanceDashboardUseCase.js';
 
 export function makeSchedulingController(): SchedulingController {
   const appointmentRepo = new PrismaAppointmentRepository();
@@ -34,6 +36,8 @@ export function makeSchedulingController(): SchedulingController {
     new UpdateAppointmentStatusUseCase(appointmentRepo, reminderScheduler),
     new RescheduleAppointmentUseCase(appointmentRepo, serviceRepo, settingsRepo, availability, reminderScheduler),
     new GetAppointmentsByPhoneUseCase(appointmentRepo),
-    new AppointmentReminderAdminUseCase(appointmentRepo, new PrismaAppointmentReminderRepository())
+    new AppointmentReminderAdminUseCase(appointmentRepo, new PrismaAppointmentReminderRepository()),
+    new CustomerAdminUseCase(),
+    new PerformanceDashboardUseCase()
   );
 }

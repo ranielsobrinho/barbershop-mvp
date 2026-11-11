@@ -137,6 +137,22 @@ await app.register(proxy, {
 });
 
 await app.register(proxy, {
+  prefix: '/api/admin/dashboard',
+  upstream: services.scheduling,
+  http2: false,
+  rewritePrefix: '/api/admin/dashboard',
+  preHandler: adminAuthMiddleware,
+});
+
+await app.register(proxy, {
+  prefix: '/api/admin/customers',
+  upstream: services.scheduling,
+  http2: false,
+  rewritePrefix: '/api/admin/customers',
+  preHandler: adminAuthMiddleware,
+});
+
+await app.register(proxy, {
   prefix: '/api/admin/appointments',
   upstream: services.scheduling,
   http2: false,

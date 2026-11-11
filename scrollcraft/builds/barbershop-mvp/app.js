@@ -124,6 +124,13 @@
     renderServiceOptions();
     paintCard(false);
     renderCalendar();
+
+    var rebookServiceId = new URLSearchParams(location.search).get('serviceId');
+    if (rebookServiceId && svcById(rebookServiceId)) {
+      chooseService(rebookServiceId, { advance: true });
+      var bookingSection = $('agendar');
+      if (bookingSection) bookingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 
   /* ------------------------------------------------------------ services -- */

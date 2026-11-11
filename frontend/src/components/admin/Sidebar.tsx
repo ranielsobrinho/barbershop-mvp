@@ -4,6 +4,8 @@ import { useSettings } from '../../hooks/useSettings';
 
 const links = [
   { to: '/admin', label: 'Agenda', icon: '📅', end: true },
+  { to: '/admin/desempenho', label: 'Desempenho', icon: '📊' },
+  { to: '/admin/clientes', label: 'Clientes', icon: '👥' },
   { to: '/admin/servicos', label: 'Serviços', icon: '✂️' },
   { to: '/admin/bloqueios', label: 'Bloqueios', icon: '🚫' },
   { to: '/admin/configuracoes', label: 'Configurações', icon: '⚙️' },

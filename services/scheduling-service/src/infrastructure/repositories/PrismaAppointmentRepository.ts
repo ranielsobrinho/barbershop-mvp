@@ -70,20 +70,29 @@ export class PrismaAppointmentRepository implements IAppointmentRepository, IApp
   }
 
   async create(appointment: Appointment): Promise<Appointment> {
-    const created = await prisma.appointment.create({
-      data: {
-        id: appointment.id,
-        serviceId: appointment.serviceId,
-        customerName: appointment.customerName,
-        customerPhone: appointment.customerPhone,
-        startsAt: appointment.startsAt,
-        endsAt: appointment.endsAt,
-        priceCents: appointment.priceCents,
-        status: appointment.status as any,
-        previousStartsAt: appointment.previousStartsAt,
-        createdAt: appointment.createdAt,
-        updatedAt: appointment.updatedAt,
-      },
+    const created = await prisma.$transaction(async (tx) => {
+      const customer = await tx.customer.upsert({
+        where: { phone: appointment.customerPhone },
+        update: { name: appointment.customerName },
+        create: { name: appointment.customerName, phone: appointment.customerPhone },
+        select: { id: true },
+      });
+      return tx.appointment.create({
+        data: {
+          id: appointment.id,
+          customerId: customer.id,
+          serviceId: appointment.serviceId,
+          customerName: appointment.customerName,
+          customerPhone: appointment.customerPhone,
+          startsAt: appointment.startsAt,
+          endsAt: appointment.endsAt,
+          priceCents: appointment.priceCents,
+          status: appointment.status as any,
+          previousStartsAt: appointment.previousStartsAt,
+          createdAt: appointment.createdAt,
+          updatedAt: appointment.updatedAt,
+        },
+      });
     });
     return toDomain(created);
   }
