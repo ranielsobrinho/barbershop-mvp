@@ -58,6 +58,34 @@ export interface AppointmentReminder {
   lastError: string | null;
 }
 
+export interface CustomerSummary {
+  id: string; name: string; phone: string; createdAt: string; visitCount: number;
+  lastVisit: string | null;
+  nextAppointment: { startsAt: string; serviceName: string } | null;
+}
+export type CustomerDetail = Omit<CustomerSummary, 'nextAppointment'> & {
+  nextAppointment: (Appointment & { service: { id: string; name: string } }) | null;
+  serviceTotals: Array<{ serviceName: string; count: number; totalCents: number }>;
+  rebookingServiceId: string | null;
+  appointments: Array<Appointment & { createdAt: string; service: { id: string; name: string } }>;
+};
+
+export interface DashboardBucket { label: string; count: number }
+export interface DashboardServiceBucket { serviceName: string; count: number }
+export interface DashboardPeriod {
+  from: string; to: string;
+  metrics: { bookedCount: number; completedCount: number; cancelledCount: number; awaitingConfirmationCount: number; bookedValueCents: number };
+  weekdayBookings: DashboardBucket[];
+  hourlyBookings: DashboardBucket[];
+  serviceMix: DashboardServiceBucket[];
+}
+export interface PerformanceDashboard {
+  timezone: string;
+  period: DashboardPeriod;
+  comparison: DashboardPeriod;
+  definitions: Record<string, string>;
+}
+
 export const adminApi = {
   login: async (email: string, password: string) => {
     const { data } = await api.post('/api/auth/login', { email, password });
@@ -147,5 +175,58 @@ export const adminApi = {
   retryAppointmentReminder: async (appointmentId: string): Promise<AppointmentReminder> => {
     const { data } = await api.post(`/api/admin/appointments/${appointmentId}/reminder/retry`);
     return data.reminder;
+  },
+  listCustomers: async (q: string): Promise<CustomerSummary[]> => {
+    const { data } = await api.get('/api/admin/customers', { params: q ? { q } : {} });
+    return data.customers;
+  },
+  getCustomer: async (id: string): Promise<CustomerDetail> => {
+    const { data } = await api.get(`/api/admin/customers/${id}`);
+    return data.customer;
+  },
+  exportCustomer: async (id: string): Promise<void> => {
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${api.defaults.baseURL || ''}/api/admin/customers/${encodeURIComponent(id)}/export`, {
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!response.ok || !response.body) throw new Error('Não foi possível exportar o CSV.');
+
+    const filename = `cliente-${id}.csv`;
+    const filePicker = (window as Window & {
+      showSaveFilePicker?: (options: { suggestedName: string; types: Array<{ description: string; accept: Record<string, string[]> }> }) => Promise<{
+        createWritable: () => Promise<WritableStream<Uint8Array>>;
+      }>;
+    }).showSaveFilePicker;
+
+    if (filePicker) {
+      const file = await filePicker({
+        suggestedName: filename,
+        types: [{ description: 'Arquivo CSV', accept: { 'text/csv': ['.csv'] } }],
+      });
+      await response.body.pipeTo(await file.createWritable());
+      return;
+    }
+
+    const reader = response.body.getReader();
+    const chunks: ArrayBuffer[] = [];
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value) chunks.push(Uint8Array.from(value).buffer as ArrayBuffer);
+    }
+    const url = URL.createObjectURL(new Blob(chunks, { type: 'text/csv;charset=utf-8' }));
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  },
+  eraseCustomer: async (id: string): Promise<void> => {
+    await api.delete(`/api/admin/customers/${id}`);
+  },
+  getPerformanceDashboard: async (from: string, to: string): Promise<PerformanceDashboard> => {
+    const { data } = await api.get('/api/admin/dashboard/performance', { params: { from, to } });
+    return data;
   },
 };

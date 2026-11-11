@@ -8,6 +8,8 @@ import { CalendarPage } from './pages/admin/CalendarPage';
 import { ServicesPage } from './pages/admin/ServicesPage';
 import { BlocksPage } from './pages/admin/BlocksPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
+import { CustomersPage } from './pages/admin/CustomersPage';
+import { PerformanceDashboardPage } from './pages/admin/PerformanceDashboardPage';
 
 export function App() {
   const { data: settings } = useQuery({ queryKey: ['settings'], queryFn: publicApi.getSettings });
@@ -23,6 +25,8 @@ export function App() {
       {/* Admin */}
       <Route path="/admin/login" element={<LoginPage />} />
       <Route path="/admin" element={<AdminLayout><CalendarPage /></AdminLayout>} />
+      <Route path="/admin/clientes" element={<AdminLayout><CustomersPage /></AdminLayout>} />
+      <Route path="/admin/desempenho" element={<AdminLayout><PerformanceDashboardPage /></AdminLayout>} />
       <Route path="/admin/servicos" element={<AdminLayout><ServicesPage /></AdminLayout>} />
       <Route path="/admin/bloqueios" element={<AdminLayout><BlocksPage /></AdminLayout>} />
       <Route path="/admin/configuracoes" element={<AdminLayout><SettingsPage /></AdminLayout>} />

@@ -210,6 +210,7 @@ Admin routes require authentication. The API supports the `auth_token` cookie an
 | `POST` | `/api/auth/logout` | End the current session |
 | `GET`, `POST`, `PUT`, `DELETE` | `/api/admin/services` | Manage services |
 | `GET`, `PATCH` | `/api/admin/appointments` | List appointments and change status/reschedule |
+| `GET`, `DELETE` | `/api/admin/customers` | Search customers, read their history/export, or erase personal data |
 | `GET`, `POST`, `DELETE` | `/api/admin/blocks` | Manage blocked dates/times |
 | `GET`, `PUT` | `/api/admin/business-hours` | Manage opening hours |
 | `GET`, `PUT` | `/api/admin/settings` | Manage booking settings |
@@ -247,6 +248,14 @@ The scheduling service checks for due reminders every 30 seconds. Delivery failu
 - The scheduling service checks for conflicting appointments before saving a booking.
 - Minimum booking notice and maximum days in advance are configurable through settings.
 - Appointments use statuses including awaiting confirmation, confirmed, cancelled, and rescheduled.
+
+## Customer history and rebooking
+
+The customer directory is available at `/painel/admin/clientes`. Booking writes a customer record keyed by a normalized Brazilian phone number; appointment name and phone fields remain historical snapshots. Existing appointments are linked and duplicate phone formats are merged by the `20261110000100_customer_history` migration.
+
+Admin endpoints are `GET /api/admin/customers?q=...`, `GET /api/admin/customers/:id`, `GET /api/admin/customers/:id/export`, and `DELETE /api/admin/customers/:id`. Export streams a paged CSV with Portuguese headings, no internal IDs or appointment contact snapshots, and full BRL values. Erasure removes the customer record and reminder records, and replaces appointment snapshot name/phone values while retaining appointment and service history. Both operations are admin-authenticated and responses containing customer data use `Cache-Control: no-store`.
+
+Visit counts and service totals include past appointments with `CONFIRMADO` status; totals represent stored appointment prices, not collected revenue. Rebooking opens a modal with the most recent active service preselected, and lets the admin choose a service, date, and currently available time for that customer. The implemented retention, export, and erasure behavior is documented in [`docs/customer-history-privacy.md`](docs/customer-history-privacy.md).
 
 ## Testing
 

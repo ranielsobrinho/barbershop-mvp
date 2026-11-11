@@ -1,4 +1,5 @@
 import { ValidationError, MinNoticeError, MaxDaysAheadError } from '../errors/DomainError.js';
+import { Phone } from '../value-objects/Phone.js';
 
 export interface SchedulingSettings {
   minNoticeHours: number;
@@ -38,8 +39,9 @@ export class SchedulingRules {
 
   /** Telefone BR com DDD: (11) 9XXXX-XXXX */
   validatePhone(phone: string): void {
-    const digits = phone.replace(/\D/g, '');
-    if (!/^(\d{2})9?\d{8}$/.test(digits)) {
+    try {
+      Phone.create(phone);
+    } catch {
       throw new ValidationError('Telefone deve ter DDD e 8 ou 9 dígitos');
     }
   }

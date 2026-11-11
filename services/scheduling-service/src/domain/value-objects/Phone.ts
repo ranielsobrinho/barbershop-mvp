@@ -2,7 +2,10 @@ export class Phone {
   private constructor(public readonly value: string) {}
 
   static create(raw: string): Phone {
-    const digits = raw.replace(/\D/g, '');
+    let digits = raw.replace(/\D/g, '');
+    if ((digits.length === 12 || digits.length === 13) && digits.startsWith('55')) {
+      digits = digits.slice(2);
+    }
     if (!/^(\d{10}|\d{11})$/.test(digits)) {
       throw new PhoneValidationError();
     }

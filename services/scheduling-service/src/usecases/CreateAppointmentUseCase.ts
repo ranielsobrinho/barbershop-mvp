@@ -94,9 +94,17 @@ export class CreateAppointmentUseCase {
         'AGUARDANDO_CONFIRMACAO'
       );
 
+      const customer = await tx.customer.upsert({
+        where: { phone: phone.value },
+        update: { name: appointment.customerName },
+        create: { name: appointment.customerName, phone: phone.value },
+        select: { id: true },
+      });
+
       const created = await tx.appointment.create({
         data: {
           id: appointment.id,
+          customerId: customer.id,
           serviceId: appointment.serviceId,
           customerName: appointment.customerName,
           customerPhone: appointment.customerPhone,

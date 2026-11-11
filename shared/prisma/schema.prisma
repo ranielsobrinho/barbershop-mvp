@@ -34,6 +34,7 @@ model Service {
 
 model Appointment {
   id                 String   @id @default(cuid())
+  customerId         String?
   serviceId          String
   customerName       String
   customerPhone      String
@@ -46,11 +47,26 @@ model Appointment {
   updatedAt          DateTime @updatedAt
 
   service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
   reminders AppointmentReminder[]
 
   @@index([startsAt, status])
   @@index([startsAt, endsAt, status])
+  @@index([customerId, startsAt])
   @@map("appointments")
+}
+
+model Customer {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  appointments Appointment[]
+
+  @@index([name])
+  @@map("customers")
 }
 
 model AppointmentReminder {

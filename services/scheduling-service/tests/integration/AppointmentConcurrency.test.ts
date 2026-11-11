@@ -10,7 +10,9 @@ describe.skipIf(!testDatabaseUrl)('appointment booking concurrency (PostgreSQL)'
   let prisma: any;
   let useCase: CreateAppointmentUseCase;
   let businessHoursId: string | undefined;
+  let previousBusinessHours: any | null = null;
   const serviceIds: string[] = [];
+  const testPhones: string[] = [];
 
   beforeAll(async () => {
     process.env.DATABASE_URL = testDatabaseUrl;
@@ -48,6 +50,7 @@ describe.skipIf(!testDatabaseUrl)('appointment booking concurrency (PostgreSQL)'
       serviceIds.push(service.id);
     }
 
+    previousBusinessHours = await prisma.businessHours.findUnique({ where: { weekday: 2 } });
     const hours = await prisma.businessHours.upsert({
       where: { weekday: 2 },
       create: { weekday: 2, opensAt: '09:00', closesAt: '18:00', breakStart: '12:00', breakEnd: '13:00', active: true },
@@ -59,8 +62,22 @@ describe.skipIf(!testDatabaseUrl)('appointment booking concurrency (PostgreSQL)'
   afterAll(async () => {
     if (!prisma) return;
     await prisma.appointment.deleteMany({ where: { serviceId: { in: serviceIds } } });
+    await prisma.customer.deleteMany({ where: { phone: { in: testPhones } } });
     await prisma.service.deleteMany({ where: { id: { in: serviceIds } } });
-    if (businessHoursId) await prisma.businessHours.delete({ where: { id: businessHoursId } });
+    if (previousBusinessHours) {
+      await prisma.businessHours.update({
+        where: { id: previousBusinessHours.id },
+        data: {
+          opensAt: previousBusinessHours.opensAt,
+          closesAt: previousBusinessHours.closesAt,
+          breakStart: previousBusinessHours.breakStart,
+          breakEnd: previousBusinessHours.breakEnd,
+          active: previousBusinessHours.active,
+        },
+      });
+    } else if (businessHoursId) {
+      await prisma.businessHours.delete({ where: { id: businessHoursId } });
+    }
     await prisma.$disconnect();
   });
 
@@ -76,6 +93,7 @@ describe.skipIf(!testDatabaseUrl)('appointment booking concurrency (PostgreSQL)'
     const startsAt15Min = `${date}T12:45:00.000Z`; // 09:45–10:00 in Fortaleza
     const phoneSuffix = String(Math.floor(Math.random() * 100_000_000)).padStart(8, '0');
     const phones = [`859${phoneSuffix}`, `859${String((Number(phoneSuffix) + 1) % 100_000_000).padStart(8, '0')}`];
+    testPhones.push(...phones);
 
     const outcomes = await Promise.allSettled([
       useCase.execute({

@@ -1,5 +1,6 @@
 import { notifyAppointment } from '../../../infrastructure/notifications/notifyAppointment.js';
 import { FastifyRequest, FastifyReply } from 'fastify';
+import { Readable } from 'node:stream';
 import { z } from 'zod';
 import { GetAvailabilityUseCase } from '../../../usecases/GetAvailabilityUseCase.js';
 import { CreateAppointmentUseCase } from '../../../usecases/CreateAppointmentUseCase.js';
@@ -10,6 +11,8 @@ import { RescheduleAppointmentUseCase } from '../../../usecases/RescheduleAppoin
 import { GetAppointmentsByPhoneUseCase } from '../../../usecases/GetAppointmentsByPhoneUseCase.js';
 import { DomainError } from '../../../domain/errors/DomainError.js';
 import { AppointmentReminderAdminUseCase } from '../../../usecases/AppointmentReminderAdminUseCase.js';
+import { CustomerAdminUseCase } from '../../../usecases/CustomerAdminUseCase.js';
+import { PerformanceDashboardUseCase } from '../../../usecases/PerformanceDashboardUseCase.js';
 
 function handleDomainError(reply: FastifyReply, error: unknown): void {
   if (error instanceof DomainError) {
@@ -45,6 +48,8 @@ export class SchedulingController {
     private readonly reschedule: RescheduleAppointmentUseCase,
     private readonly getByPhone: GetAppointmentsByPhoneUseCase,
     private readonly appointmentReminder: AppointmentReminderAdminUseCase,
+    private readonly customerAdmin: CustomerAdminUseCase,
+    private readonly performanceDashboard: PerformanceDashboardUseCase,
   ) {}
 
   async availability(request: FastifyRequest, reply: FastifyReply): Promise<void> {
@@ -150,6 +155,67 @@ export class SchedulingController {
       const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
       const reminder = await this.appointmentReminder.retry(id);
       return reply.status(202).send({ reminder });
+    } catch (error) {
+      return handleDomainError(reply, error);
+    }
+  }
+
+  async listCustomers(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const query = z.object({ q: z.string().trim().max(100).optional() }).parse(request.query);
+      const customers = await this.customerAdmin.list(query.q);
+      reply.header('cache-control', 'no-store');
+      return reply.send({ customers });
+    } catch (error) {
+      return handleDomainError(reply, error);
+    }
+  }
+
+  async getCustomer(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+      const customer = await this.customerAdmin.detail(id);
+      reply.header('cache-control', 'no-store');
+      return reply.send({ customer });
+    } catch (error) {
+      return handleDomainError(reply, error);
+    }
+  }
+
+  async exportCustomer(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+      const rows = await this.customerAdmin.exportCsv(id);
+      reply.header('cache-control', 'no-store');
+      reply.header('content-type', 'text/csv; charset=utf-8');
+      reply.header('content-disposition', `attachment; filename="customer-${id}.csv"`);
+      reply.header('x-content-type-options', 'nosniff');
+      return reply.send(Readable.from(rows));
+    } catch (error) {
+      return handleDomainError(reply, error);
+    }
+  }
+
+  async eraseCustomer(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+      await this.customerAdmin.erase(id);
+      reply.header('cache-control', 'no-store');
+      return reply.status(204).send();
+    } catch (error) {
+      return handleDomainError(reply, error);
+    }
+  }
+
+  async performanceDashboardData(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const query = z.object({
+        from: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        to: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+      }).parse(request.query);
+      const dashboard = await this.performanceDashboard.execute(query.from, query.to);
+      reply.header('cache-control', 'no-store');
+      return reply.send(dashboard);
     } catch (error) {
       return handleDomainError(reply, error);
     }
