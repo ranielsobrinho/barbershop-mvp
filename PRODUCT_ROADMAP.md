@@ -24,11 +24,11 @@ The repository already includes public booking, an admin panel, service and sche
 
 **Work**
 
-- [ ] Fix and verify the calendar weekday/time-zone issue recorded in `TODO.md` for `America/Fortaleza`.
-- [ ] Define the AWS deployment in Terraform: network, ECS cluster, ECR, RDS PostgreSQL, load balancer, service discovery, IAM roles, secrets, and logs.
-- [ ] Run the Terraform configuration against Floci first, using its local endpoint and only the AWS services enabled in the local instance. Confirm this stage cannot target the real AWS account.
-- [ ] Build and run separate ECS services for the API gateway and each backend (auth, scheduling, services, blocks, business-hours, and settings), plus the production web entry point.
-- [ ] Build the React admin panel and serve it with the static landing page through `server.mjs` without Vite; expose only the public web service.
+- [x] Fix and verify the calendar weekday/time-zone issue recorded in `TODO.md` for `America/Fortaleza` (implemented and verified in Phase 1).
+- [x] Define the AWS deployment in Terraform: network, ECS cluster, ECR, RDS PostgreSQL, load balancer, service discovery, IAM roles, secrets, and logs.
+- [x] Run the Terraform configuration against Floci first, using local endpoints for the configured AWS APIs and test credentials; the provider endpoints point to `127.0.0.1:4566`.
+- [x] Build and run separate ECS services for the API gateway and each backend (auth, scheduling, services, blocks, business-hours, and settings), plus the production web entry point. Floci reported all eight services at desired/running 1 and the web target healthy; the services were later removed intentionally.
+- [x] Build the React admin panel and serve it with the static landing page through `server.mjs` without Vite; expose only the public web service.
 - [ ] Add a one-shot database migration task, health checks, and verify the public health route, booking flow, and admin login against PostgreSQL.
 - [ ] After Floci validation, use the same Terraform configuration with AWS endpoints and production secrets to deploy the demo to AWS.
 - [ ] Choose a single public demo URL and provide seeded, clearly fictional data.
@@ -38,7 +38,7 @@ The repository already includes public booking, an admin panel, service and sche
 
 **Acceptance**
 
-- Terraform creates and destroys the required local Floci resources without requests reaching a real AWS account.
+- Terraform creates and destroys the required local Floci resources without requests reaching a real AWS account. The provider currently hard-codes Floci endpoints and test credentials; replace these deliberately before any AWS workspace/deployment.
 - Each backend can be deployed and scaled as an independent ECS service; the public web service reaches the gateway and internal services privately.
 - A clean browser can open the public landing page and complete a booking.
 - Admin login can confirm, reschedule, and cancel a booking.
@@ -211,6 +211,7 @@ Use Floci to validate Terraform and container orchestration locally, then deploy
 ## Progress log
 
 - 2026-10-27: Roadmap captured from the current repository and product research. Phase 0 is the first implementation target.
+- 2026-11-11: Marked the Phase 0 calendar/time-zone criterion complete; the fix and regression coverage were implemented and verified in Phase 1.
 - 2026-10-30: Phase 1 implementation completed and verified: booking checks run atomically under a PostgreSQL advisory lock, overlapping service durations serialize, timezone/date regression coverage is present, and the booking UI exposes recovery states. The live concurrency integration check previously passed against an isolated database.
 - 2026-10-30: Phase 2 implementation started: configurable reminder settings, durable outbox schema, scheduler/worker with leased claims and exponential retries, cancellation on status changes/reschedules, and admin status/retry UI are in place. The local migration is applied. Provider-backed delivery tests, setup documentation, and duplicate-delivery behavior across provider/network timeouts remain open; the external providers' idempotency support has not been verified.
 - 2026-11-03: Deployment direction updated to AWS ECS with independently scalable backend services; Terraform will be tested against the user's Floci instance before AWS. Added a load-testing phase for isolated, staged hundreds-to-thousands RPS profiles.
@@ -218,6 +219,7 @@ Use Floci to validate Terraform and container orchestration locally, then deploy
 - 2026-11-10: Phase 3 implementation started. Added normalized Customer records and appointment links with snapshots, migration/backfill and duplicate-phone merge, authenticated customer search/history/export/identity-erasure endpoints, admin customer directory, and rebooking that carries the prior active service into the public flow while fetching current availability. Privacy/retention policy decisions and the phase's automated coverage remain open; implementation has not been run through the workspace checks yet.
 - 2026-11-10: Phase 3 complete. Applied the customer-history migration to the local PostgreSQL database and confirmed all 5 existing appointments are linked. Added a documented manual retention/export/erasure policy, admin customer API/UI, rebooking modal for service/date/available time, and a paged streamed CSV report with Portuguese headings, no internal IDs, and BRL amounts. Workspace lint and the full suite passed.
 - 2026-11-10: Phase 4 complete. Added shop-timezone date-range reporting with comparison, status/value definitions, accessible weekday/hour/service charts, and CSV export. PostgreSQL aggregates keep appointment rows in the database; integration tests verify a hand-calculated status/value sample, Fortaleza day boundaries, reschedules/cancellations, and empty periods. Full workspace suite passed (17 tasks).
+- 2026-11-13: Phase 0 Floci infrastructure and application deployment were exercised. Terraform now defines the network, RDS, ALB, ECR, ECS, IAM, Secrets Manager, logs, and service discovery; the provider is pinned to Floci at `127.0.0.1:4566` with test credentials. Eight ECS services reached 1/1 running and the web target returned HTTP 200 inside Floci after correcting the database URL to use Floci's endpoint port `7001`. The production image built locally and was tagged for the Floci/ECS image URI, but pushing to Floci ECR failed with Docker Engine 29/containerd HTTPS behavior. The ECS services were subsequently removed by setting `deploy_application=false`; base infrastructure remains in the `floci` Terraform workspace. Current state has no running ECS services. The ALB public URL is not reachable from the host because Floci publishes only port 4566; direct ALB access from inside the Floci network worked. Migration/seed task, booking/admin end-to-end checks, public host access, AWS deployment, demo guide/screenshots, and AWS budget/cost review remain open. Phase 0 is not complete.
 
 ## Sources checked 2026-10-27
 
