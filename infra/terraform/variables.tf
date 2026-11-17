@@ -1,3 +1,21 @@
+variable "aws_region" {
+  description = "AWS region for Floci or AWS resources."
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "use_floci" {
+  description = "Use the local Floci endpoint and test credentials. Set false only with an AWS workspace and AWS credentials."
+  type        = bool
+  default     = true
+}
+
+variable "floci_endpoint" {
+  description = "Base endpoint for the local Floci emulator."
+  type        = string
+  default     = "http://127.0.0.1:4566"
+}
+
 variable "database_password" {
   description = "Master password for the private demo PostgreSQL instance. Supply through a local tfvars file or TF_VAR_database_password."
   type        = string

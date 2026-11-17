@@ -1,22 +1,22 @@
 provider "aws" {
-  region     = "us-east-1"
-  access_key = "test"
-  secret_key = "test"
+  region     = var.aws_region
+  access_key = var.use_floci ? "test" : null
+  secret_key = var.use_floci ? "test" : null
 
-  skip_credentials_validation = true
-  skip_metadata_api_check     = true
-  skip_requesting_account_id  = true
+  skip_credentials_validation = var.use_floci
+  skip_metadata_api_check     = var.use_floci
+  skip_requesting_account_id  = var.use_floci
 
   endpoints {
-    cloudfront       = "http://127.0.0.1:4566"
-    cloudwatchlogs   = "http://127.0.0.1:4566"
-    ec2              = "http://127.0.0.1:4566"
-    ecr              = "http://127.0.0.1:4566"
-    ecs              = "http://127.0.0.1:4566"
-    elbv2            = "http://127.0.0.1:4566"
-    iam              = "http://127.0.0.1:4566"
-    rds              = "http://127.0.0.1:4566"
-    secretsmanager   = "http://127.0.0.1:4566"
-    servicediscovery = "http://127.0.0.1:4566"
+    cloudfront       = var.use_floci ? var.floci_endpoint : null
+    cloudwatchlogs   = var.use_floci ? var.floci_endpoint : null
+    ec2              = var.use_floci ? var.floci_endpoint : null
+    ecr              = var.use_floci ? var.floci_endpoint : null
+    ecs              = var.use_floci ? var.floci_endpoint : null
+    elbv2            = var.use_floci ? var.floci_endpoint : null
+    iam              = var.use_floci ? var.floci_endpoint : null
+    rds              = var.use_floci ? var.floci_endpoint : null
+    secretsmanager   = var.use_floci ? var.floci_endpoint : null
+    servicediscovery = var.use_floci ? var.floci_endpoint : null
   }
 }

@@ -687,7 +687,7 @@ resource "aws_ecs_task_definition" "application" {
       logDriver = "awslogs"
       options = {
         "awslogs-group"         = aws_cloudwatch_log_group.application[each.key].name
-        "awslogs-region"        = "us-east-1"
+        "awslogs-region"        = var.aws_region
         "awslogs-stream-prefix" = each.key
       }
     }
@@ -699,6 +699,39 @@ resource "aws_ecs_task_definition" "application" {
     aws_secretsmanager_secret_version.database_url,
     aws_secretsmanager_secret_version.jwt,
     aws_secretsmanager_secret_version.cookie
+  ]
+}
+
+resource "aws_ecs_task_definition" "migration" {
+  count = var.deploy_application ? 1 : 0
+
+  family                   = "seu-carlos-migration"
+  requires_compatibilities = ["FARGATE"]
+  network_mode             = "awsvpc"
+  cpu                      = 256
+  memory                   = 512
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
+
+  container_definitions = jsonencode([{
+    name      = "migration"
+    image     = "${aws_ecr_repository.application.registry_id}.dkr.ecr.${aws_ecr_repository.application.region}.amazonaws.com/${aws_ecr_repository.application.name}:${var.image_tag}"
+    essential = true
+    command   = ["pnpm", "--filter", "@barbershop/prisma", "db:migrate:deploy"]
+    secrets   = [{ name = "DATABASE_URL", valueFrom = aws_secretsmanager_secret.database_url.arn }]
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = aws_cloudwatch_log_group.application["migration"].name
+        "awslogs-region"        = var.aws_region
+        "awslogs-stream-prefix" = "migration"
+      }
+    }
+  }])
+
+  depends_on = [
+    aws_iam_role_policy_attachment.ecs_task_execution,
+    aws_iam_role_policy.ecs_secret_read,
+    aws_secretsmanager_secret_version.database_url
   ]
 }
 
@@ -752,16 +785,19 @@ resource "aws_db_subnet_group" "showcase" {
 }
 
 resource "aws_db_instance" "showcase" {
-  identifier                 = "seu-carlos-showcase"
-  engine                     = "postgres"
-  instance_class             = "db.t4g.micro"
-  allocated_storage          = 20
-  max_allocated_storage      = 50
-  storage_type               = "gp3"
+  identifier        = "seu-carlos-showcase"
+  engine            = "postgres"
+  instance_class    = "db.t4g.micro"
+  allocated_storage = 20
+  # Floci exposes PostgreSQL through its mapped port and reports gp2 with no
+  # autoscaling; keep those emulator values out of the plan to avoid database
+  # updates unrelated to the application rollout.
+  max_allocated_storage      = var.use_floci ? 0 : 50
+  storage_type               = var.use_floci ? "gp2" : "gp3"
   db_name                    = "barbershop"
   username                   = "barbershop_app"
   password                   = var.database_password
-  port                       = 5432
+  port                       = var.use_floci ? 7001 : 5432
   db_subnet_group_name       = aws_db_subnet_group.showcase.name
   vpc_security_group_ids     = [aws_security_group.database.id]
   publicly_accessible        = false
