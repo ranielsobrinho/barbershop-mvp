@@ -3,6 +3,7 @@ import { IAppointmentRepository } from '../domain/repositories/IAppointmentRepos
 import { ConflictError, NotFoundError } from '../domain/errors/DomainError.js';
 import { REMINDER_ELIGIBLE_STATUSES } from './AppointmentReminderScheduler.js';
 import { PrismaAppointmentReminderRepository } from '../infrastructure/repositories/PrismaAppointmentReminderRepository.js';
+import { getTenantContext } from '@barbershop/tenant-context';
 
 export class AppointmentReminderAdminUseCase {
   constructor(
@@ -31,7 +32,7 @@ export class AppointmentReminderAdminUseCase {
       }
 
       const config = await tx.whatsAppIntegration.findUnique({
-        where: { id: 'default' },
+      where: { tenantId_id: { tenantId: getTenantContext()?.tenantId || 'tenant_seu_carlos', id: 'default' } },
         select: { provider: true, reminderEnabled: true },
       });
       if (!config?.reminderEnabled || !config.provider) {

@@ -1,4 +1,5 @@
 import { fromZonedTime } from 'date-fns-tz';
+import { getTenantContext } from '@barbershop/tenant-context';
 import prisma from '../infrastructure/database/prisma.js';
 import { ValidationError } from '../domain/errors/DomainError.js';
 
@@ -22,6 +23,8 @@ function shiftDate(value: string, days: number): string {
 }
 
 async function periodStats(from: string, to: string, now: Date) {
+  const tenantId = getTenantContext()?.tenantId;
+  if (!tenantId) throw new Error('Tenant context is required for dashboard queries');
   const rangeStart = fromZonedTime(`${from}T00:00:00`, TIMEZONE);
   const rangeEnd = fromZonedTime(`${shiftDate(to, 1)}T00:00:00`, TIMEZONE);
   const where = { startsAt: { gte: rangeStart, lt: rangeEnd } };
@@ -41,21 +44,21 @@ async function periodStats(from: string, to: string, now: Date) {
       SELECT EXTRACT(DOW FROM ((a."startsAt" AT TIME ZONE 'UTC') AT TIME ZONE ${TIMEZONE}))::int AS bucket,
              COUNT(*)::int AS count
       FROM "appointments" a
-      WHERE a."startsAt" >= ${rangeStart} AND a."startsAt" < ${rangeEnd}
+      WHERE a."tenantId" = ${tenantId} AND a."startsAt" >= ${rangeStart} AND a."startsAt" < ${rangeEnd}
       GROUP BY bucket
     `,
     prisma.$queryRaw<Array<{ bucket: number; count: number }>>`
       SELECT EXTRACT(HOUR FROM ((a."startsAt" AT TIME ZONE 'UTC') AT TIME ZONE ${TIMEZONE}))::int AS bucket,
              COUNT(*)::int AS count
       FROM "appointments" a
-      WHERE a."startsAt" >= ${rangeStart} AND a."startsAt" < ${rangeEnd}
+      WHERE a."tenantId" = ${tenantId} AND a."startsAt" >= ${rangeStart} AND a."startsAt" < ${rangeEnd}
       GROUP BY bucket
     `,
     prisma.$queryRaw<Array<{ serviceName: string; count: number }>>`
       SELECT s."name" AS "serviceName", COUNT(*)::int AS count
       FROM "appointments" a
-      INNER JOIN "services" s ON s."id" = a."serviceId"
-      WHERE a."startsAt" >= ${rangeStart} AND a."startsAt" < ${rangeEnd}
+      INNER JOIN "services" s ON s."id" = a."serviceId" AND s."tenantId" = a."tenantId"
+      WHERE a."tenantId" = ${tenantId} AND a."startsAt" >= ${rangeStart} AND a."startsAt" < ${rangeEnd}
       GROUP BY s."name"
       ORDER BY count DESC, s."name" ASC
     `,

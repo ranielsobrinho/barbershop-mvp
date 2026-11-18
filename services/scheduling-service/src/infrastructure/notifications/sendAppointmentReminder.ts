@@ -1,4 +1,5 @@
 import jwt from 'jsonwebtoken';
+import { getTenantContext } from '@barbershop/tenant-context';
 
 export interface ReminderDeliveryResult {
   sent: boolean;
@@ -24,7 +25,11 @@ export async function sendAppointmentReminder(appointmentId: string, idempotency
   try {
     response = await fetch(`${process.env.SETTINGS_SERVICE_URL || 'http://localhost:3006'}/internal/whatsapp/reminders`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Shop-Slug': getTenantContext()?.slug || 'seu-carlos',
+      },
       body: JSON.stringify({ appointmentId, idempotencyKey }),
       signal: AbortSignal.timeout(12000),
       redirect: 'error',

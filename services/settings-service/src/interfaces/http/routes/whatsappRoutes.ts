@@ -4,6 +4,9 @@ import { z } from 'zod';
 import { prisma } from '../../../infrastructure/database/prisma.js';
 import { authMiddleware } from '../middleware/auth.js';
 import { emptyIntegration, integrationSchema, mergeIntegration, publicIntegration, sendMessage, type Integration } from '../../../infrastructure/whatsapp/integration.js';
+import { getTenantContext } from '@barbershop/tenant-context';
+
+const integrationKey = () => ({ tenantId_id: { tenantId: getTenantContext()?.tenantId || 'tenant_seu_carlos', id: 'default' } });
 
 function asIntegration(value: Awaited<ReturnType<typeof prisma.whatsAppIntegration.findUnique>>) {
   return { ...emptyIntegration, ...value } as Integration;
@@ -11,19 +14,19 @@ function asIntegration(value: Awaited<ReturnType<typeof prisma.whatsAppIntegrati
 
 export async function whatsappRoutes(app: FastifyInstance) {
   app.get('/api/admin/whatsapp-integration', { preHandler: authMiddleware }, async () => {
-    const storedConfig = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
+    const storedConfig = await prisma.whatsAppIntegration.findUnique({ where: integrationKey() });
     const config = asIntegration(storedConfig);
     return { integration: publicIntegration(config) };
   });
   app.put('/api/admin/whatsapp-integration', { preHandler: authMiddleware }, async (request, reply) => {
     const parsed = integrationSchema.safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ message: 'Dados inválidos', details: parsed.error.flatten().fieldErrors });
-    const current = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
+    const current = await prisma.whatsAppIntegration.findUnique({ where: integrationKey() });
     let next;
     try { next = mergeIntegration(asIntegration(current), parsed.data); }
     catch (error) { return reply.code(400).send({ message: (error as Error).message }); }
     const config = await prisma.whatsAppIntegration.upsert({
-      where: { id: 'default' }, create: { id: 'default', ...next }, update: next,
+      where: integrationKey(), create: { id: 'default', ...next }, update: next,
     });
     return { integration: publicIntegration(config) };
   });
@@ -39,7 +42,7 @@ export async function whatsappRoutes(app: FastifyInstance) {
     } catch { return reply.code(401).send({ message: 'Unauthorized' }); }
     const parsed = z.object({ appointmentId: z.string().min(1) }).strict().safeParse(request.body);
     if (!parsed.success) return reply.code(400).send({ message: 'Dados inválidos' });
-    const storedConfig = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
+    const storedConfig = await prisma.whatsAppIntegration.findUnique({ where: integrationKey() });
     const config = asIntegration(storedConfig);
     if (!config?.provider) return { sent: false };
     const appointment = await prisma.appointment.findUnique({ where: { id: parsed.data.appointmentId }, include: { service: true } });
@@ -95,7 +98,7 @@ export async function whatsappRoutes(app: FastifyInstance) {
     if (!parsed.success) return reply.code(400).send({ message: 'Dados inválidos' });
 
     const reminder = await prisma.appointmentReminder.findUnique({
-      where: { idempotencyKey: parsed.data.idempotencyKey },
+      where: { tenantId_idempotencyKey: { tenantId: getTenantContext()?.tenantId || 'tenant_seu_carlos', idempotencyKey: parsed.data.idempotencyKey } },
       select: { appointmentId: true, status: true, nextAttemptAt: true },
     });
     if (
@@ -103,7 +106,7 @@ export async function whatsappRoutes(app: FastifyInstance) {
       reminder.status !== 'PROCESSING' || reminder.nextAttemptAt.getTime() > Date.now()
     ) return { sent: false, reason: 'reminder-not-currently-due' };
 
-    const storedConfig = await prisma.whatsAppIntegration.findUnique({ where: { id: 'default' } });
+    const storedConfig = await prisma.whatsAppIntegration.findUnique({ where: integrationKey() });
     const config = asIntegration(storedConfig);
     if (!config.reminderEnabled) return { sent: false, reason: 'disabled' };
     if (!config.provider) return { sent: false, reason: 'provider-not-configured' };

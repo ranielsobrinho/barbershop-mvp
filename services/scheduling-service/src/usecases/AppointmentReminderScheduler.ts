@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Appointment } from '../domain/entities/Appointment.js';
+import { getTenantContext } from '@barbershop/tenant-context';
 
 export const REMINDER_ELIGIBLE_STATUSES = ['CONFIRMADO', 'REAGENDADO'] as const;
 
@@ -21,7 +22,7 @@ export class AppointmentReminderScheduler {
     ) return;
 
     const config = await tx.whatsAppIntegration.findUnique({
-      where: { id: 'default' },
+      where: { tenantId_id: { tenantId: getTenantContext()?.tenantId || 'tenant_seu_carlos', id: 'default' } },
       select: { reminderEnabled: true, reminderHoursBefore: true },
     });
     if (!config?.reminderEnabled) return;

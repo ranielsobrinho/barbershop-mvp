@@ -1,5 +1,6 @@
 import { whatsappRoutes } from './interfaces/http/routes/whatsappRoutes.js';
 import Fastify from 'fastify';
+import { createTenantContextHook } from '@barbershop/tenant-context';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import { env } from './infrastructure/config/env.js';
@@ -32,6 +33,7 @@ const app = Fastify({
 });
 await app.register(helmet);
 await app.register(cookie, { secret: process.env.COOKIE_SECRET || env.jwt.secret, hook: 'onRequest' });
+app.addHook('onRequest', createTenantContextHook(prisma));
 const controller = makeSettingsController();
 await publicRoutes(app, controller);
 await adminRoutes(app, controller);

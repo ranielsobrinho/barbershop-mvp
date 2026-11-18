@@ -1,5 +1,7 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 import jwt from 'jsonwebtoken';
+import { getTenantContext } from '@barbershop/tenant-context';
+import prisma from '../../../infrastructure/database/prisma.js';
 
 export async function authMiddleware(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const token = request.cookies.auth_token || request.headers.authorization?.replace('Bearer ', '');
@@ -7,7 +9,14 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
   try {
     const jwtSecret = process.env.JWT_SECRET || 'super-secret-jwt-key-change-in-production-min-32-chars';
     const payload = jwt.verify(token, jwtSecret) as { sub: string };
-    (request as any).user = { id: payload.sub };
+    const tenant = getTenantContext();
+    if (!tenant) return reply.status(403).send({ error: 'ShopContextRequired' });
+    const membership = await prisma.tenantMembership.findUnique({
+      where: { tenantId_userId: { tenantId: tenant.tenantId, userId: payload.sub } },
+    });
+    if (!membership) return reply.status(403).send({ error: 'ShopAccessDenied' });
+    if (membership.role === 'STAFF') return reply.status(403).send({ error: 'InsufficientShopRole' });
+    (request as any).user = { id: payload.sub, tenantId: tenant.tenantId, role: membership.role };
   } catch {
     return reply.status(401).send({ error: 'InvalidToken' });
   }

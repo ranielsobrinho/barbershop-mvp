@@ -1,5 +1,6 @@
 import { ServerCredentials } from '@grpc/grpc-js';
 import Fastify from 'fastify';
+import { createTenantContextHook } from '@barbershop/tenant-context';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import { env } from './infrastructure/config/env.js';
@@ -38,6 +39,7 @@ await app.register(cookie, {
   secret: process.env.COOKIE_SECRET || env.jwt.secret,
   hook: 'onRequest',
 });
+app.addHook('onRequest', createTenantContextHook(prisma));
 
 const servicesController = makeServicesController();
 app.register((instance) => servicesRoutes(instance, servicesController), { prefix: '/api/services' });

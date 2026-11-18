@@ -45,6 +45,7 @@ const services = {
 await app.register(cors, {
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Shop-Slug'],
 });
 
 await app.register(helmet, {
@@ -111,6 +112,13 @@ await app.register(proxy, {
 });
 
 await app.register(proxy, {
+  prefix: '/api/barbers',
+  upstream: services.scheduling,
+  http2: false,
+  rewritePrefix: '/api/barbers',
+});
+
+await app.register(proxy, {
   prefix: '/api/blocked-dates',
   upstream: services.scheduling,
   http2: false,
@@ -128,6 +136,14 @@ await app.register(proxy, {
 });
 
 // Admin routes - require auth
+await app.register(proxy, {
+  prefix: '/api/admin/barbers',
+  upstream: services.scheduling,
+  http2: false,
+  rewritePrefix: '/api/admin/barbers',
+  preHandler: adminAuthMiddleware,
+});
+
 await app.register(proxy, {
   prefix: '/api/admin/services',
   upstream: services.services,

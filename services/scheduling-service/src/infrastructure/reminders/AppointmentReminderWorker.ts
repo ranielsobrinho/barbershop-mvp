@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { FastifyBaseLogger } from 'fastify';
+import { getTenantContext, runWithTenantContext } from '@barbershop/tenant-context';
 import prisma from '../database/prisma.js';
 import { REMINDER_ELIGIBLE_STATUSES } from '../../usecases/AppointmentReminderScheduler.js';
 import { ReminderDeliveryError, sendAppointmentReminder } from '../notifications/sendAppointmentReminder.js';
@@ -45,32 +46,38 @@ export class AppointmentReminderWorker {
   }
 
   private async processDue(): Promise<void> {
-    let leases: ReminderLease[];
-    try {
-      leases = await this.claimDue();
-    } catch (error) {
-      this.logger.error({ err: error }, 'Could not claim due appointment reminders');
-      return;
+    const tenants = await prisma.tenant.findMany({ where: { active: true }, select: { id: true, slug: true } });
+    for (const tenant of tenants) {
+      await runWithTenantContext({ tenantId: tenant.id, slug: tenant.slug }, async () => {
+        try {
+          const leases = await this.claimDue();
+          await Promise.all(leases.map((lease) => this.deliver(lease)));
+        } catch (error) {
+          this.logger.error({ err: error, tenantId: tenant.id }, 'Could not process due appointment reminders');
+        }
+      });
     }
-    await Promise.all(leases.map((lease) => this.deliver(lease)));
   }
 
   private async claimDue(): Promise<ReminderLease[]> {
+    const tenantId = getTenantContext()?.tenantId;
+    if (!tenantId) throw new Error('Tenant context is required to claim reminders');
     return prisma.$transaction(async (tx) => {
       const due = await tx.$queryRawUnsafe<Array<{ id: string }>>(
         `SELECT r."id"
          FROM "appointment_reminders" r
-         WHERE (
+         WHERE r."tenantId" = $1 AND (
            (r."status" = 'PENDING'::"AppointmentReminderStatus" AND r."nextAttemptAt" <= CURRENT_TIMESTAMP)
            OR (r."status" = 'PROCESSING'::"AppointmentReminderStatus" AND r."leaseExpiresAt" <= CURRENT_TIMESTAMP)
          )
          AND EXISTS (
            SELECT 1 FROM "whatsapp_integration" w
-           WHERE w."id" = 'default' AND w."reminderEnabled" = true AND w."provider" IS NOT NULL
+           WHERE w."tenantId" = $1 AND w."id" = 'default' AND w."reminderEnabled" = true AND w."provider" IS NOT NULL
          )
          ORDER BY r."nextAttemptAt" ASC
-         LIMIT $1::integer
+         LIMIT $2::integer
          FOR UPDATE SKIP LOCKED`,
+        tenantId,
         BATCH_SIZE,
       );
 

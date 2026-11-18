@@ -1,5 +1,6 @@
 import jwt from 'jsonwebtoken';
 import type { FastifyBaseLogger } from 'fastify';
+import { getTenantContext } from '@barbershop/tenant-context';
 
 export async function notifyAppointment(appointmentId: string, logger: Pick<FastifyBaseLogger, 'warn'>) {
   const secret = process.env.WHATSAPP_INTERNAL_SECRET;
@@ -9,7 +10,11 @@ export async function notifyAppointment(appointmentId: string, logger: Pick<Fast
       algorithm: 'HS256', expiresIn: '30s', audience: 'whatsapp-notifications', issuer: 'scheduling-service',
     });
     const response = await fetch(`${process.env.SETTINGS_SERVICE_URL || 'http://localhost:3006'}/internal/whatsapp/appointments`, {
-      method: 'POST', headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      method: 'POST', headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'X-Shop-Slug': getTenantContext()?.slug || 'seu-carlos',
+      },
       body: JSON.stringify({ appointmentId }), signal: AbortSignal.timeout(10000), redirect: 'error',
     });
     if (!response.ok) throw new Error('Notification failed');

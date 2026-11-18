@@ -1,5 +1,6 @@
 import { ServerCredentials } from '@grpc/grpc-js';
 import Fastify from 'fastify';
+import { createTenantContextHook } from '@barbershop/tenant-context';
 import cookie from '@fastify/cookie';
 import helmet from '@fastify/helmet';
 import rateLimit from '@fastify/rate-limit';
@@ -39,6 +40,7 @@ await app.register(cookie, {
   secret: process.env.COOKIE_SECRET || env.cookieSecret,
   hook: 'onRequest',
 });
+app.addHook('onRequest', createTenantContextHook(prisma));
 
 // Global rate limit
 await app.register(rateLimit, {
