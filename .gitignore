@@ -1,4 +1,5 @@
 node_modules/
+shared/prisma/generated/
 .env
 **/.env
 **/.terraform/

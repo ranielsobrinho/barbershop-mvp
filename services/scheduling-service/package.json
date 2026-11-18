@@ -12,6 +12,8 @@
     "proto:generate": "mkdir -p src/interfaces/grpc/generated && grpc_tools_node_protoc --proto_path=../../shared/proto --plugin=protoc-gen-ts_proto=$PWD/node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=src/interfaces/grpc/generated --ts_proto_opt=outputServices=grpc-js,esModuleInterop=true,env=node,importSuffix=.js scheduling.proto services.proto blocks.proto business_hours.proto"
   },
   "dependencies": {
+    "@barbershop/prisma": "workspace:*",
+    "@barbershop/tenant-context": "workspace:*",
     "@bufbuild/protobuf": "^2.0.0",
     "@fastify/cookie": "^11.0.0",
     "@fastify/helmet": "^13.0.0",

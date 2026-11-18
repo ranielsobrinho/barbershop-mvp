@@ -1,10 +1,22 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from './generated/client/index.js'
 import bcrypt from 'bcryptjs'
 
 const prisma = new PrismaClient()
+const defaultTenantId = 'tenant_seu_carlos'
 
 async function main() {
   console.log('🌱 Seeding database...')
+
+  const tenant = await prisma.tenant.upsert({
+    where: { id: defaultTenantId },
+    update: {},
+    create: {
+      id: defaultTenantId,
+      name: 'Seu Carlos Barbearia',
+      slug: 'seu-carlos',
+    },
+  })
+  console.log('✅ Default tenant ready:', tenant.slug)
 
   // Create admin user
   const passwordHash = await bcrypt.hash('admin123', 12)
@@ -18,6 +30,22 @@ async function main() {
   })
   console.log('✅ Admin user created:', admin.email)
 
+  await prisma.tenantMembership.upsert({
+    where: { tenantId_userId: { tenantId: defaultTenantId, userId: admin.id } },
+    update: { role: 'OWNER' },
+    create: { tenantId: defaultTenantId, userId: admin.id, role: 'OWNER' },
+  })
+
+  const barber = await prisma.barber.upsert({
+    where: { id: 'barber_seu_carlos' },
+    update: {},
+    create: {
+      id: 'barber_seu_carlos',
+      tenantId: defaultTenantId,
+      name: 'Seu Carlos',
+    },
+  })
+
   // Create default services
   const services = [
     { name: 'Corte', description: 'Corte de cabelo masculino', priceCents: 3000, slotMin: 30 },
@@ -28,9 +56,9 @@ async function main() {
 
   for (const service of services) {
     await prisma.service.upsert({
-      where: { name: service.name },
+      where: { tenantId_name: { tenantId: defaultTenantId, name: service.name } },
       update: {},
-      create: service,
+      create: { ...service, tenantId: defaultTenantId },
     })
   }
   console.log('✅ Default services created')
@@ -48,19 +76,29 @@ async function main() {
 
   for (const bh of businessHours) {
     await prisma.businessHours.upsert({
-      where: { weekday: bh.weekday },
+      where: { tenantId_weekday: { tenantId: defaultTenantId, weekday: bh.weekday } },
       update: bh,
-      create: bh,
+      create: { ...bh, tenantId: defaultTenantId },
     })
   }
   console.log('✅ Default business hours created')
 
+  for (const bh of businessHours) {
+    await prisma.barberBusinessHours.upsert({
+      where: { barberId_weekday: { barberId: barber.id, weekday: bh.weekday } },
+      update: { ...bh, tenantId: defaultTenantId },
+      create: { ...bh, tenantId: defaultTenantId, barberId: barber.id },
+    })
+  }
+  console.log('✅ Default barber hours created')
+
   // Create default settings
   await prisma.settings.upsert({
-    where: { id: 'default' },
+    where: { tenantId_id: { tenantId: defaultTenantId, id: 'default' } },
     update: {},
     create: {
       id: 'default',
+      tenantId: defaultTenantId,
       minNoticeHours: 2,
       maxDaysAhead: 60,
       companyName: 'Seu Carlos Barbearia',

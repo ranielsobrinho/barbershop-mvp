@@ -1,5 +1,6 @@
 generator client {
   provider = "prisma-client-js"
+  output   = "./generated/client"
 }
 
 datasource db {
@@ -14,12 +15,91 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  memberships TenantMembership[]
+
   @@map("users")
+}
+
+model Tenant {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships         TenantMembership[]
+  barbers             Barber[]
+  services            Service[]
+  appointments        Appointment[]
+  customers           Customer[]
+  reminders           AppointmentReminder[]
+  businessHours       BusinessHours[]
+  blocks              Block[]
+  settings            Settings[]
+  whatsappIntegration WhatsAppIntegration[]
+
+  @@map("tenants")
+}
+
+model TenantMembership {
+  id        String     @id @default(cuid())
+  tenantId  String
+  userId    String
+  role      TenantRole @default(STAFF)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("tenant_memberships")
+}
+
+model Barber {
+  id        String   @id @default(cuid())
+  tenantId  String   @default("tenant_seu_carlos")
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant       Tenant                 @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  appointments Appointment[]
+  businessHours BarberBusinessHours[]
+  blocks Block[]
+
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@map("barbers")
+}
+
+model BarberBusinessHours {
+  id         String   @id @default(cuid())
+  tenantId   String   @default("tenant_seu_carlos")
+  barberId   String
+  weekday    Int
+  opensAt    String
+  closesAt   String
+  breakStart String?
+  breakEnd   String?
+  active     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  barber Barber @relation(fields: [tenantId, barberId], references: [tenantId, id], onDelete: Restrict)
+
+  @@unique([barberId, weekday])
+  @@index([tenantId, weekday])
+  @@map("barber_business_hours")
 }
 
 model Service {
   id          String   @id @default(cuid())
-  name        String   @unique
+  tenantId    String   @default("tenant_seu_carlos")
+  name        String
   description String?
   priceCents  Int
   slotMin     Int
@@ -28,12 +108,18 @@ model Service {
   updatedAt   DateTime @updatedAt
 
   appointments Appointment[]
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  @@unique([tenantId, id])
+  @@unique([tenantId, name])
+  @@index([tenantId])
   @@map("services")
 }
 
 model Appointment {
   id                 String   @id @default(cuid())
+  tenantId           String   @default("tenant_seu_carlos")
+  barberId           String   @default("barber_seu_carlos")
   customerId         String?
   serviceId          String
   customerName       String
@@ -46,10 +132,14 @@ model Appointment {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  service Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
-  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  service Service @relation(fields: [tenantId, serviceId], references: [tenantId, id], onDelete: Restrict)
+  customer Customer? @relation(fields: [tenantId, customerId], references: [tenantId, id], onDelete: Restrict)
   reminders AppointmentReminder[]
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  barber Barber @relation(fields: [tenantId, barberId], references: [tenantId, id], onDelete: Restrict)
 
+  @@unique([tenantId, id])
+  @@index([tenantId, startsAt, status])
   @@index([startsAt, status])
   @@index([startsAt, endsAt, status])
   @@index([customerId, startsAt])
@@ -58,19 +148,25 @@ model Appointment {
 
 model Customer {
   id        String   @id @default(cuid())
+  tenantId  String   @default("tenant_seu_carlos")
   name      String
-  phone     String   @unique
+  phone     String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   appointments Appointment[]
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  @@unique([tenantId, id])
+  @@unique([tenantId, phone])
+  @@index([tenantId])
   @@index([name])
   @@map("customers")
 }
 
 model AppointmentReminder {
   id                    String                    @id @default(cuid())
+  tenantId              String                    @default("tenant_seu_carlos")
   appointmentId         String
   scheduledAt           DateTime
   nextAttemptAt         DateTime
@@ -80,14 +176,17 @@ model AppointmentReminder {
   sentAt                DateTime?
   providerResponseCode  Int?
   lastError             String?                   @db.Text
-  idempotencyKey        String                    @unique
+  idempotencyKey        String
   leaseExpiresAt        DateTime?
   leaseToken            String?
   createdAt             DateTime                  @default(now())
   updatedAt             DateTime                  @updatedAt
 
-  appointment Appointment @relation(fields: [appointmentId], references: [id], onDelete: Cascade)
+  appointment Appointment @relation(fields: [tenantId, appointmentId], references: [tenantId, id], onDelete: Cascade)
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
+  @@index([tenantId, status, nextAttemptAt])
+  @@unique([tenantId, idempotencyKey])
   @@index([status, nextAttemptAt])
   @@index([appointmentId, createdAt])
   @@map("appointment_reminders")
@@ -95,6 +194,7 @@ model AppointmentReminder {
 
 model BusinessHours {
   id         String   @id @default(cuid())
+  tenantId   String   @default("tenant_seu_carlos")
   weekday    Int      // 0=Domingo ... 6=Sábado
   opensAt    String   // "09:00"
   closesAt   String   // "18:00"
@@ -104,24 +204,35 @@ model BusinessHours {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  @@unique([weekday])
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@unique([tenantId, weekday])
   @@map("business_hours")
 }
 
 model Block {
   id        String   @id @default(cuid())
+  tenantId  String   @default("tenant_seu_carlos")
+  barberId  String?
   startsAt  DateTime
   endsAt    DateTime
   reason    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  barber Barber? @relation(fields: [tenantId, barberId], references: [tenantId, id], onDelete: Restrict)
+
+  @@index([tenantId, startsAt, endsAt])
+  @@index([tenantId, barberId, startsAt, endsAt])
   @@index([startsAt, endsAt])
   @@map("blocks")
 }
 
 model Settings {
-  id              String   @id @default(cuid())
+  id              String   @default("default")
+  tenantId        String   @default("tenant_seu_carlos")
   minNoticeHours  Int      @default(2)
   maxDaysAhead    Int      @default(60)
   companyName     String   @default("Seu Carlos Barbearia")
@@ -130,6 +241,10 @@ model Settings {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@id([tenantId, id])
+  @@index([tenantId])
   @@map("settings")
 }
 
@@ -148,8 +263,15 @@ enum AppointmentReminderStatus {
   CANCELLED
 }
 
+enum TenantRole {
+  OWNER
+  ADMIN
+  STAFF
+}
+
 model WhatsAppIntegration {
-  id                String @id @default("default")
+  id                String @default("default")
+  tenantId          String @default("tenant_seu_carlos")
   provider          WhatsAppProvider?
   wameApiKey        String?
   zapsterApiToken    String?
@@ -163,6 +285,10 @@ model WhatsAppIntegration {
   messageReminder               String? @db.Text
   updatedAt         DateTime @updatedAt
 
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@id([tenantId, id])
+  @@index([tenantId])
   @@map("whatsapp_integration")
 }
 

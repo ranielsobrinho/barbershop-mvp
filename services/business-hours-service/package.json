@@ -11,6 +11,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@barbershop/prisma": "workspace:*",
+    "@barbershop/tenant-context": "workspace:*",
     "@fastify/cookie": "^11.0.0",
     "@fastify/helmet": "^13.0.0",
     "@prisma/client": "^5.15.0",

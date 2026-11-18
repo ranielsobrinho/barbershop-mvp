@@ -133,6 +133,12 @@ importers:
 
   services/auth-service:
     dependencies:
+      '@barbershop/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
+      '@barbershop/tenant-context':
+        specifier: workspace:*
+        version: link:../../shared/tenant-context
       '@bufbuild/protobuf':
         specifier: ^2.0.0
         version: 2.16.0
@@ -194,6 +200,12 @@ importers:
 
   services/blocks-service:
     dependencies:
+      '@barbershop/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
+      '@barbershop/tenant-context':
+        specifier: workspace:*
+        version: link:../../shared/tenant-context
       '@fastify/cookie':
         specifier: ^11.0.0
         version: 11.1.3
@@ -237,6 +249,12 @@ importers:
 
   services/business-hours-service:
     dependencies:
+      '@barbershop/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
+      '@barbershop/tenant-context':
+        specifier: workspace:*
+        version: link:../../shared/tenant-context
       '@fastify/cookie':
         specifier: ^11.0.0
         version: 11.1.3
@@ -277,6 +295,12 @@ importers:
 
   services/scheduling-service:
     dependencies:
+      '@barbershop/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
+      '@barbershop/tenant-context':
+        specifier: workspace:*
+        version: link:../../shared/tenant-context
       '@bufbuild/protobuf':
         specifier: ^2.0.0
         version: 2.16.0
@@ -335,6 +359,12 @@ importers:
 
   services/services-service:
     dependencies:
+      '@barbershop/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
+      '@barbershop/tenant-context':
+        specifier: workspace:*
+        version: link:../../shared/tenant-context
       '@bufbuild/protobuf':
         specifier: ^2.0.0
         version: 2.16.0
@@ -387,6 +417,12 @@ importers:
 
   services/settings-service:
     dependencies:
+      '@barbershop/prisma':
+        specifier: workspace:*
+        version: link:../../shared/prisma
+      '@barbershop/tenant-context':
+        specifier: workspace:*
+        version: link:../../shared/tenant-context
       '@fastify/cookie':
         specifier: ^11.0.0
         version: 11.1.3
@@ -449,6 +485,8 @@ importers:
       ts-proto:
         specifier: ^2.6.0
         version: 2.18.0
+
+  shared/tenant-context: {}
 
   shared/types:
     devDependencies:
