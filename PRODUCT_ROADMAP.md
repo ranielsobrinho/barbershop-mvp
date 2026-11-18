@@ -136,13 +136,15 @@ The repository already includes public booking, an admin panel, service and sche
 
 **Work**
 
-- [ ] Define the `Tenant`/shop identity, stable public slug, tenant lifecycle, and user membership/role model. Keep tenant selection explicit for users who may belong to more than one shop.
-- [ ] Inventory all tenant-owned data and make ownership explicit: services, appointments, customers, business hours, blocks, settings, reminders, notification/provider configuration, and staff/barbers.
-- [ ] Backfill all current records into a default Seu Carlos tenant. Add tenant-aware foreign keys, indexes, and unique constraints; preserve history and make the migration safely deployable.
-- [ ] Resolve tenant context from trusted routing/authentication (public shop slug or configured domain; authenticated membership), never from an unchecked client-supplied `tenantId`.
-- [ ] Propagate tenant context through gateway, REST and gRPC calls. Scope every repository read/write, admin route, lookup, export, notification, and background job by tenant; reject missing or mismatched context.
-- [ ] Add staff/barber profiles owned by a tenant. Assign services, working hours, blocks, and appointments to a barber and scope availability and conflict locking by tenant and barber.
-- [ ] Add public barber selection and tenant-scoped admin views, including “any available barber” only if product requirements call for it.
+- [x] Define the `Tenant`/shop identity, stable public slug, lifecycle field, and user membership/role model.
+- [x] Inventory all tenant-owned data and make ownership explicit: services, appointments, customers, business hours, blocks, settings, reminders, notification/provider configuration, and staff/barbers.
+- [x] Backfill all current records into a default Seu Carlos tenant. Add tenant-aware foreign keys, indexes, and unique constraints; preserve history and make the migration safely deployable.
+- [x] Resolve tenant context from the configured public shop slug; authenticated administrative routes also require a live tenant membership, never an unchecked `tenantId`.
+- [x] Propagate tenant context through gateway, REST and gRPC boundaries. Scope Prisma operations, raw dashboard/reminder SQL, notifications, exports, and background work by tenant.
+- [x] Add tenant-owned barber profiles, individual schedules and blocks. Scope availability and advisory locking by barber.
+- [x] Add public barber selection, admin assignment/reassignment per appointment, and tenant-scoped admin APIs/UI for barbers, schedules, and blocks.
+- [ ] Add tenant provisioning/lifecycle management and a tenant picker for users with multiple memberships; remove hard-coded default tenant/barber assumptions from app flows.
+- [ ] Decide and implement which services each barber can perform, then filter booking and availability by that relationship.
 - [ ] Add cross-tenant authorization and isolation coverage for direct REST, gateway proxy, gRPC, background workers, exports, and guessed record IDs; test users with one and multiple tenant memberships.
 
 **Acceptance**
@@ -151,6 +153,15 @@ The repository already includes public booking, an admin panel, service and sche
 - Existing Seu Carlos records belong to the default tenant after migration with all foreign-key relationships and history preserved.
 - A barber cannot be double-booked within the same tenant; different barbers in the same tenant may accept overlapping appointments when their schedules allow it.
 - Tenant selection is derived from a verified shop route or membership; callers cannot switch tenants by changing a request parameter or record ID.
+
+**Implementation progress (2026-11-17)**
+
+- Added the `Tenant` and `TenantMembership` schema, tenant ownership, tenant-local unique constraints, composite foreign keys, and the default Seu Carlos backfill. Existing customer, appointment, service, settings, and notification rows are preserved.
+- Added barbers, individual business hours, barber-specific blocks, public barber selection, per-barber availability and conflict locking, and admin controls to add/deactivate barbers and maintain their schedules.
+- Added admin assignment/reassignment of future appointments to active barbers, with availability/conflict validation, schedule locks, and barber names in appointment responses.
+- Added validated shop-slug resolution at the gateway-facing HTTP services, live membership checks for admin routes, and tenant scoping for Prisma operations, dashboard SQL, reminder claims, exports, and internal WhatsApp calls. Services-service gRPC methods require `x-shop-slug`; mutations also require a member token.
+- Applied the migration and idempotent seed to the local Docker PostgreSQL. The latest local count is 4 customers, 8 appointments, 5 services, 1 default barber with 7 schedule rows, and Carlos's OWNER membership. The seeded login returned HTTP 200, and the protected barber endpoint returned HTTP 200 after fixing Fastify async-context propagation.
+- Remaining before calling the phase fully accepted: automated cross-tenant isolation coverage, tenant provisioning and multi-membership selection, barber/service eligibility, and removal of hard-coded single-shop defaults. External gRPC consumers must provide `x-shop-slug` and member authorization for mutations.
 
 ### Phase 6 — Load testing and capacity validation (M)
 

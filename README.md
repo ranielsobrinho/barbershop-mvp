@@ -95,6 +95,10 @@ DATABASE_URL=postgresql://barbershop:<POSTGRES_PASSWORD>@localhost:5432/barbersh
 
 Set `JWT_SECRET` and `COOKIE_SECRET` in each service's local `.env` as well. The example file is a variable-name template; blank values are not ready-to-run credentials. `.env` files are ignored by Git and should never be committed.
 
+The frontend sends `VITE_SHOP_SLUG` as the selected public shop, and backend services use `DEFAULT_TENANT_SLUG` when the header is absent. Both default to `seu-carlos`; the slug is resolved against an active tenant, while administrative routes also verify the user's database membership.
+
+The public booking form lets a client choose an active barber. In the admin panel, open **Configurações** to add or deactivate barbers and edit each barber's weekly hours. New barbers start with the first active barber's schedule. Blocks can apply to one barber or to the whole shop. The default tenant and Carlos membership are created by the migration/seed; creating additional tenants is an operator/database provisioning task for now.
+
 ### 3. Start PostgreSQL
 
 To use the repository's local PostgreSQL 16 container:
@@ -142,6 +146,8 @@ docker compose up -d --build
 ```
 
 On startup, Compose waits for PostgreSQL, applies pending Prisma migrations, and loads the idempotent development seed before starting the APIs. Use the single web entry point at <http://localhost:8080/>: the public booking experience is at `/`, and the administration panel is at <http://localhost:8080/painel>. The gateway health check remains available at <http://localhost:3000/health>. Vite runs inside Compose for hot reload and is proxied through `/painel`; its port is not published to the host. Stop the stack with `docker compose down`; this keeps the database volume. To remove the database and its local data as well, use `docker compose down -v`.
+
+If host ports 3000 or 8080 are already in use, set alternate `API_GATEWAY_PORT` and `LANDING_PORT` values in the root `.env` before starting Compose.
 
 ## Development
 
