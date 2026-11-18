@@ -7,9 +7,11 @@ import { Appointment } from '../domain/entities/Appointment.js';
 import { ConflictError, NotFoundError, SlotUnavailableError, ValidationError } from '../domain/errors/DomainError.js';
 import { Phone } from '../domain/value-objects/Phone.js';
 import { addMinutes, parseISO } from 'date-fns';
+import { getTenantContext } from '@barbershop/tenant-context';
 
 export interface CreateAppointmentInput {
   serviceId: string;
+  barberId?: string;
   customerName: string;
   customerPhone: string;
   startsAt: string; // ISO 8601
@@ -48,7 +50,8 @@ export class CreateAppointmentUseCase {
 
     // Do not trust the public client to submit only generated slots. Validate
     // business hours, breaks, alignment, blocks, and existing appointments.
-    await this.availability.assertBookable(startsAt, endsAt, undefined, service.slotMin);
+    const barberId = input.barberId || 'barber_seu_carlos';
+    await this.availability.assertBookable(startsAt, endsAt, undefined, service.slotMin, barberId);
 
     // Anti-abuso: limite de agendamentos por telefone nas últimas 24h
     const phone = Phone.create(input.customerPhone);
@@ -66,6 +69,7 @@ export class CreateAppointmentUseCase {
           startsAt: { lt: endsAt },
           endsAt: { gt: startsAt },
           status: { in: ['AGUARDANDO_CONFIRMACAO', 'CONFIRMADO', 'REAGENDADO'] as any },
+          barberId,
         },
       });
       if (conflicts.length > 0) {
@@ -77,6 +81,7 @@ export class CreateAppointmentUseCase {
         where: {
           startsAt: { lt: endsAt },
           endsAt: { gt: startsAt },
+          OR: [{ barberId }, { barberId: null }],
         },
       });
       if (blocks.length > 0) {
@@ -91,11 +96,12 @@ export class CreateAppointmentUseCase {
         startsAt,
         endsAt,
         service.priceCents,
-        'AGUARDANDO_CONFIRMACAO'
+        'AGUARDANDO_CONFIRMACAO',
+        barberId
       );
 
       const customer = await tx.customer.upsert({
-        where: { phone: phone.value },
+        where: { tenantId_phone: { tenantId: getTenantContext()?.tenantId || 'tenant_seu_carlos', phone: phone.value } },
         update: { name: appointment.customerName },
         create: { name: appointment.customerName, phone: phone.value },
         select: { id: true },
@@ -106,6 +112,7 @@ export class CreateAppointmentUseCase {
           id: appointment.id,
           customerId: customer.id,
           serviceId: appointment.serviceId,
+          barberId,
           customerName: appointment.customerName,
           customerPhone: appointment.customerPhone,
           startsAt: appointment.startsAt,
@@ -116,14 +123,15 @@ export class CreateAppointmentUseCase {
           createdAt: appointment.createdAt,
           updatedAt: appointment.updatedAt,
         },
+        include: { barber: { select: { name: true } } },
       });
 
       return new Appointment(
         created.id, created.serviceId, created.customerName, created.customerPhone,
         new Date(created.startsAt), new Date(created.endsAt), created.priceCents,
         created.status, created.previousStartsAt ? new Date(created.previousStartsAt) : null,
-        new Date(created.createdAt), new Date(created.updatedAt)
+        new Date(created.createdAt), new Date(created.updatedAt), created.barberId, created.barber.name
       );
-    });
+    }, barberId);
   }
 }

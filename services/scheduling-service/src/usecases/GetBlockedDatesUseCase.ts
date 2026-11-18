@@ -17,7 +17,7 @@ export class GetBlockedDatesUseCase {
     const start = startOfMonth(monthDate);
     const end = endOfMonth(monthDate);
 
-    const blocks = await this.blockRepo.findByPeriod(start, end);
+    const blocks = await this.blockRepo.findByPeriod(start, end, null);
     if (blocks.length === 0) return [];
 
     const blockedDates = new Set<string>();

@@ -17,6 +17,7 @@ import { AppointmentReminderAdminUseCase } from '../../../usecases/AppointmentRe
 import { AppointmentReminderScheduler } from '../../../usecases/AppointmentReminderScheduler.js';
 import { CustomerAdminUseCase } from '../../../usecases/CustomerAdminUseCase.js';
 import { PerformanceDashboardUseCase } from '../../../usecases/PerformanceDashboardUseCase.js';
+import { AssignAppointmentBarberUseCase } from '../../../usecases/AssignAppointmentBarberUseCase.js';
 
 export function makeSchedulingController(): SchedulingController {
   const appointmentRepo = new PrismaAppointmentRepository();
@@ -38,6 +39,7 @@ export function makeSchedulingController(): SchedulingController {
     new GetAppointmentsByPhoneUseCase(appointmentRepo),
     new AppointmentReminderAdminUseCase(appointmentRepo, new PrismaAppointmentReminderRepository()),
     new CustomerAdminUseCase(),
-    new PerformanceDashboardUseCase()
+    new PerformanceDashboardUseCase(),
+    new AssignAppointmentBarberUseCase(appointmentRepo, serviceRepo, availability),
   );
 }

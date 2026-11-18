@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useSettings, useUpdateSettings } from '../../hooks/useSettings';
 import { useBusinessHours, useUpdateBusinessHours } from '../../hooks/useBusinessHours';
 import { useWhatsAppIntegration, useUpdateWhatsAppIntegration } from '../../hooks/useWhatsAppIntegration';
 import { Spinner } from '../../components/ui/Spinner';
 import { Modal } from '../../components/ui/Modal';
 import { WEEKDAYS_FULL } from '../../utils/date';
-import type { BusinessHours, WhatsAppIntegration, WhatsAppIntegrationUpdate } from '../../services/adminApi';
+import { adminApi, type BusinessHours, type WhatsAppIntegration, type WhatsAppIntegrationUpdate } from '../../services/adminApi';
 import { useToast } from '../../contexts/ToastContext';
 
 const DEFAULT_WHATSAPP_MESSAGES = {
@@ -18,9 +19,13 @@ const DEFAULT_WHATSAPP_MESSAGES = {
 
 export function SettingsPage() {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
+  const { data: barbers = [], isLoading: barbersLoading } = useQuery({ queryKey: ['admin-barbers'], queryFn: adminApi.listBarbers });
+  const [selectedBarberId, setSelectedBarberId] = useState('barber_seu_carlos');
+  const [newBarberName, setNewBarberName] = useState('');
   const { data: settings, isLoading: settingsLoading, error: settingsLoadError } = useSettings();
   const updateSettings = useUpdateSettings();
-  const { data: hours = [], isLoading: hoursLoading, error: hoursLoadError } = useBusinessHours();
+  const { data: hours = [], isLoading: hoursLoading, error: hoursLoadError } = useBusinessHours(selectedBarberId);
   const updateHours = useUpdateBusinessHours();
   const { data: whatsapp, isLoading: whatsappLoading, isError: whatsappLoadError } = useWhatsAppIntegration();
   const updateWhatsApp = useUpdateWhatsAppIntegration();
@@ -73,6 +78,12 @@ export function SettingsPage() {
   }, [hours]);
 
   useEffect(() => {
+    if (barbers.length && !barbers.some((barber) => barber.id === selectedBarberId)) {
+      setSelectedBarberId(barbers.find((barber) => barber.id === 'barber_seu_carlos')?.id || barbers[0].id);
+    }
+  }, [barbers, selectedBarberId]);
+
+  useEffect(() => {
     if (whatsapp) {
       setWaProvider(whatsapp.provider);
       // Secrets start empty - never pre-filled
@@ -108,10 +119,10 @@ export function SettingsPage() {
 
   const handleSaveHours = async () => {
     try {
-      await updateHours.mutateAsync(hoursDraft.map(h => ({
+      await updateHours.mutateAsync({ barberId: selectedBarberId, hours: hoursDraft.map(h => ({
         weekday: h.weekday, opensAt: h.opensAt, closesAt: h.closesAt,
         breakStart: h.breakStart, breakEnd: h.breakEnd, active: h.active,
-      })));
+      })) });
       showToast('Horário de funcionamento salvo com sucesso.');
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erro ao salvar horário de funcionamento';
@@ -184,16 +195,66 @@ export function SettingsPage() {
 
   const isWhatsAppLoading = whatsappLoading || whatsappLoadError || updateWhatsApp.isPending;
 
-  if (settingsLoading || hoursLoading || whatsappLoading) return <Spinner />;
+  if (settingsLoading || hoursLoading || whatsappLoading || barbersLoading) return <Spinner />;
+
+  const addBarber = async (event: React.FormEvent) => {
+    event.preventDefault();
+    const name = newBarberName.trim();
+    if (!name) return;
+    try {
+      const barber = await adminApi.createBarber(name);
+      setNewBarberName('');
+      setSelectedBarberId(barber.id);
+      await queryClient.invalidateQueries({ queryKey: ['admin-barbers'] });
+      await queryClient.invalidateQueries({ queryKey: ['business-hours', barber.id] });
+      showToast('Barbeiro adicionado com o expediente padrão.');
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Não foi possível adicionar o barbeiro.', 'error');
+    }
+  };
+
+  const toggleBarber = async (id: string, active: boolean) => {
+    try {
+      await adminApi.updateBarber(id, { active });
+      await queryClient.invalidateQueries({ queryKey: ['admin-barbers'] });
+      await queryClient.invalidateQueries({ queryKey: ['barbers'] });
+      showToast(active ? 'Barbeiro reativado.' : 'Barbeiro desativado.');
+    } catch (error: any) {
+      showToast(error.response?.data?.message || 'Não foi possível atualizar o barbeiro.', 'error');
+    }
+  };
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Configurações</h1>
 
+      <section className="card mb-6">
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Barbeiros</h2>
+        <p className="text-sm text-gray-500 mb-4">Gerencie quem atende nesta barbearia e o expediente individual.</p>
+        <div className="space-y-3">
+          {barbers.map((barber) => (
+            <div key={barber.id} className="flex items-center justify-between gap-3 rounded-lg border border-gray-200 p-3">
+              <span className="font-medium">{barber.name}{barber.active ? '' : ' (inativo)'}</span>
+              {barber.id !== 'barber_seu_carlos' && <button type="button" onClick={() => void toggleBarber(barber.id, !barber.active)} className="btn-secondary">
+                {barber.active ? 'Desativar' : 'Reativar'}
+              </button>}
+            </div>
+          ))}
+        </div>
+        <form onSubmit={addBarber} className="mt-4 flex flex-wrap gap-2">
+          <input value={newBarberName} onChange={(event) => setNewBarberName(event.target.value)} className="input-field flex-1" placeholder="Nome do novo barbeiro" maxLength={80} />
+          <button type="submit" className="btn-primary" disabled={!newBarberName.trim()}>Adicionar barbeiro</button>
+        </form>
+      </section>
+
       {/* Expediente */}
       <section className="card mb-6">
         <h2 className="text-lg font-bold text-gray-900 mb-1">Horário de funcionamento</h2>
-        <p className="text-sm text-gray-500 mb-4">Define a disponibilidade exibida ao cliente</p>
+        <p className="text-sm text-gray-500 mb-4">Define a disponibilidade deste barbeiro exibida ao cliente</p>
+        <label className="label" htmlFor="hours-barber">Barbeiro</label>
+        <select id="hours-barber" value={selectedBarberId} onChange={(event) => setSelectedBarberId(event.target.value)} className="input-field mb-4">
+          {barbers.filter((barber) => barber.active).map((barber) => <option key={barber.id} value={barber.id}>{barber.name}</option>)}
+        </select>
 
         <div className="space-y-3">
           {[...hoursDraft].sort((a, b) => a.weekday - b.weekday).map((h) => (

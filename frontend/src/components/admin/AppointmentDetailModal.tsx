@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Modal } from '../ui/Modal';
 import { DateInput } from '../ui/DateInput';
 import { StatusBadge } from '../ui/Badge';
-import { useUpdateStatus, useReschedule, useAppointmentReminder, useRetryAppointmentReminder } from '../../hooks/useAppointments';
+import { useUpdateStatus, useReschedule, useAppointmentReminder, useRetryAppointmentReminder, useAssignAppointmentBarber } from '../../hooks/useAppointments';
 import { formatMoney } from '../../utils/money';
 import { formatBusinessFullDate, formatBusinessTime, getBusinessCalendarDate, toDateString } from '../../utils/date';
 import { parseDateInput } from '../../utils/dateInput';
 import { STATUS_LABELS } from '../../utils/constants';
 import { useToast } from '../../contexts/ToastContext';
 import type { Appointment } from '../../services/publicApi';
+import { publicApi } from '../../services/publicApi';
 
 interface Props {
   appointment: Appointment | null;
@@ -21,6 +23,9 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
   const reschedule = useReschedule();
   const reminderQuery = useAppointmentReminder(appointment?.id ?? null);
   const retryReminder = useRetryAppointmentReminder();
+  const assignBarber = useAssignAppointmentBarber();
+  const { data: barbers = [] } = useQuery({ queryKey: ['barbers'], queryFn: publicApi.getBarbers });
+  const [barberId, setBarberId] = useState('');
   const [showReschedule, setShowReschedule] = useState(false);
   const [newDate, setNewDate] = useState('');
   const [newTime, setNewTime] = useState('');
@@ -32,6 +37,10 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
   useEffect(() => {
     if (reminderQuery.isError) showToast('Não foi possível carregar o status do lembrete.', 'error');
   }, [reminderQuery.isError, showToast]);
+
+  useEffect(() => {
+    setBarberId(appointment?.barberId || '');
+  }, [appointment?.id, appointment?.barberId]);
 
   if (!appointment) return null;
 
@@ -68,6 +77,20 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
       onClose();
     } catch (err: any) {
       const message = err.response?.data?.message || 'Erro ao reagendar';
+      setError(message);
+      showToast(message, 'error');
+    }
+  };
+
+  const handleAssignBarber = async () => {
+    if (!barberId || barberId === appointment.barberId) return;
+    setError(null);
+    try {
+      const updated = await assignBarber.mutateAsync({ id: appointment.id, barberId });
+      showToast(`Atendimento atribuído a ${updated.barberName || 'outro barbeiro'}.`);
+      onClose();
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Não foi possível alterar o barbeiro.';
       setError(message);
       showToast(message, 'error');
     }
@@ -122,6 +145,19 @@ export function AppointmentDetailModal({ appointment, onClose }: Props) {
             </div>
           )}
         </div>
+
+        <section className="rounded-xl border border-gray-200 p-4 space-y-3" aria-label="Atribuir barbeiro">
+          <label htmlFor="appointment-barber" className="text-sm font-medium text-gray-700">Quem vai atender</label>
+          <select id="appointment-barber" className="input-field" value={barberId} onChange={(event) => setBarberId(event.target.value)}>
+            <option value="" disabled>Selecione um barbeiro</option>
+            {barbers.map((barber) => <option key={barber.id} value={barber.id}>{barber.name}</option>)}
+          </select>
+          <button type="button" onClick={handleAssignBarber}
+            disabled={!barberId || barberId === appointment.barberId || assignBarber.isPending}
+            className="btn-secondary w-full disabled:opacity-50">
+            {assignBarber.isPending ? 'Atribuindo…' : 'Salvar barbeiro'}
+          </button>
+        </section>
 
         <section className="rounded-xl border border-gray-200 p-4 space-y-2" aria-label="Lembrete do agendamento">
           <h4 className="font-semibold text-gray-900">Lembrete por WhatsApp</h4>

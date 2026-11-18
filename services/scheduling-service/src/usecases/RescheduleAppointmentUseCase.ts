@@ -35,7 +35,7 @@ export class RescheduleAppointmentUseCase {
     rules.validateSlot(newStartsAt);
 
     // Expediente, bloqueios e conflitos (excluindo o próprio agendamento)
-    await this.availability.assertBookable(newStartsAt, newEndsAt, existing.id, service.slotMin);
+    await this.availability.assertBookable(newStartsAt, newEndsAt, existing.id, service.slotMin, existing.barberId);
 
     const oldStartsAt = existing.startsAt;
 
@@ -56,6 +56,7 @@ export class RescheduleAppointmentUseCase {
           endsAt: { gt: newStartsAt },
           status: { in: ['AGUARDANDO_CONFIRMACAO', 'CONFIRMADO', 'REAGENDADO'] as any },
           id: { not: id },
+          barberId: existing.barberId,
         },
       });
       if (conflicts.length > 0) {
@@ -67,6 +68,7 @@ export class RescheduleAppointmentUseCase {
         where: {
           startsAt: { lt: newEndsAt },
           endsAt: { gt: newStartsAt },
+          OR: [{ barberId: existing.barberId }, { barberId: null }],
         },
       });
       if (blocks.length > 0) {
@@ -93,10 +95,10 @@ export class RescheduleAppointmentUseCase {
         updated.id, updated.serviceId, updated.customerName, updated.customerPhone,
         new Date(updated.startsAt), new Date(updated.endsAt), updated.priceCents,
         updated.status, updated.previousStartsAt ? new Date(updated.previousStartsAt) : null,
-        new Date(updated.createdAt), new Date(updated.updatedAt)
+        new Date(updated.createdAt), new Date(updated.updatedAt), updated.barberId
       );
       await this.reminderScheduler.sync(tx, result);
       return result;
-    });
+    }, existing.barberId);
   }
 }

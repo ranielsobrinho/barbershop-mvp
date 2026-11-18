@@ -16,18 +16,20 @@ const updateSchema = z.object({ hours: z.array(hoursSchema).min(7).max(7) });
 export class BusinessHoursController {
   constructor(private readonly repo: PrismaBusinessHoursRepository) {}
 
-  async get(_req: FastifyRequest, reply: FastifyReply): Promise<void> {
-    const hours = await this.repo.findAll();
+  async get(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const query = z.object({ barberId: z.string().min(1).default('barber_seu_carlos') }).parse(request.query);
+    const hours = await this.repo.findAll(query.barberId);
     return reply.send({ hours });
   }
 
   async update(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
-      const { hours } = updateSchema.parse(request.body);
+      const body = z.object({ barberId: z.string().min(1).default('barber_seu_carlos'), hours: updateSchema.shape.hours }).parse(request.body);
+      const { hours, barberId } = body;
       const updated = [];
       for (const h of hours) {
         updated.push(await this.repo.upsert({
-          weekday: h.weekday, opensAt: h.opensAt, closesAt: h.closesAt,
+          barberId, weekday: h.weekday, opensAt: h.opensAt, closesAt: h.closesAt,
           breakStart: h.breakStart ?? null, breakEnd: h.breakEnd ?? null, active: h.active,
         }));
       }

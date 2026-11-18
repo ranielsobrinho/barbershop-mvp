@@ -13,6 +13,9 @@ import { DomainError } from '../../../domain/errors/DomainError.js';
 import { AppointmentReminderAdminUseCase } from '../../../usecases/AppointmentReminderAdminUseCase.js';
 import { CustomerAdminUseCase } from '../../../usecases/CustomerAdminUseCase.js';
 import { PerformanceDashboardUseCase } from '../../../usecases/PerformanceDashboardUseCase.js';
+import { PrismaBarberRepository } from '../../../infrastructure/repositories/PrismaBarberRepository.js';
+import prisma from '../../../infrastructure/database/prisma.js';
+import { AssignAppointmentBarberUseCase } from '../../../usecases/AssignAppointmentBarberUseCase.js';
 
 function handleDomainError(reply: FastifyReply, error: unknown): void {
   if (error instanceof DomainError) {
@@ -28,6 +31,7 @@ function handleDomainError(reply: FastifyReply, error: unknown): void {
 
 const createSchema = z.object({
   serviceId: z.string().min(1),
+  barberId: z.string().min(1).optional(),
   customerName: z.string().min(2).max(80),
   customerPhone: z.string().min(10).max(15),
   startsAt: z.string().min(1),
@@ -39,6 +43,8 @@ const statusSchema = z.object({ status: z.string().min(1) });
 const rescheduleSchema = z.object({ newStartsAt: z.string().min(1) });
 
 export class SchedulingController {
+  private readonly barberRepository = new PrismaBarberRepository();
+
   constructor(
     private readonly getAvailability: GetAvailabilityUseCase,
     private readonly createAppointment: CreateAppointmentUseCase,
@@ -50,16 +56,61 @@ export class SchedulingController {
     private readonly appointmentReminder: AppointmentReminderAdminUseCase,
     private readonly customerAdmin: CustomerAdminUseCase,
     private readonly performanceDashboard: PerformanceDashboardUseCase,
+    private readonly assignBarber: AssignAppointmentBarberUseCase,
   ) {}
+
+  async listBarbers(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    return reply.send({ barbers: await this.barberRepository.listActive() });
+  }
+
+  async listAdminBarbers(_request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const barbers = await prisma.barber.findMany({ orderBy: { createdAt: 'asc' } });
+    return reply.send({ barbers });
+  }
+
+  async createBarber(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const parsed = z.object({ name: z.string().trim().min(2).max(80) }).safeParse(request.body);
+    if (!parsed.success) return reply.code(400).send({ error: 'VALIDATION_ERROR', details: parsed.error.flatten().fieldErrors });
+    const barber = await prisma.$transaction(async (tx) => {
+      const created = await tx.barber.create({ data: { name: parsed.data.name } });
+      const defaultBarber = await tx.barber.findFirst({ where: { active: true }, orderBy: { createdAt: 'asc' } });
+      const defaults = defaultBarber
+        ? await tx.barberBusinessHours.findMany({ where: { barberId: defaultBarber.id } })
+        : [];
+      if (defaults.length) await tx.barberBusinessHours.createMany({
+        data: defaults.map(({ weekday, opensAt, closesAt, breakStart, breakEnd, active }) => ({
+          barberId: created.id, weekday, opensAt, closesAt, breakStart, breakEnd, active,
+        })),
+      });
+      return created;
+    });
+    return reply.code(201).send({ barber });
+  }
+
+  async updateBarber(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    const parsed = z.object({ id: z.string().min(1) }).and(z.object({
+      name: z.string().trim().min(2).max(80).optional(),
+      active: z.boolean().optional(),
+    }).refine((body) => body.name !== undefined || body.active !== undefined)).safeParse({
+      ...(request.params as object), ...(request.body as object),
+    });
+    if (!parsed.success) return reply.code(400).send({ error: 'VALIDATION_ERROR' });
+    const { id, ...data } = parsed.data;
+    const result = await prisma.barber.updateMany({ where: { id }, data });
+    if (!result.count) return reply.code(404).send({ error: 'BARBER_NOT_FOUND' });
+    const barber = await prisma.barber.findUnique({ where: { id } });
+    return reply.send({ barber });
+  }
 
   async availability(request: FastifyRequest, reply: FastifyReply): Promise<void> {
     try {
       const query = z.object({
         date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         serviceId: z.string().min(1),
+        barberId: z.string().min(1).default('barber_seu_carlos'),
       }).parse(request.query);
 
-      const slots = await this.getAvailability.execute(query.date, query.serviceId);
+      const slots = await this.getAvailability.execute(query.date, query.serviceId, query.barberId);
       return reply.send({ slots });
     } catch (error) {
       return handleDomainError(reply, error);
@@ -84,6 +135,7 @@ export class SchedulingController {
       const input = createSchema.parse(request.body);
       const appointment = await this.createAppointment.execute({
         serviceId: input.serviceId,
+        barberId: input.barberId,
         customerName: input.customerName,
         customerPhone: input.customerPhone,
         startsAt: input.startsAt,
@@ -122,6 +174,17 @@ export class SchedulingController {
       const { status } = statusSchema.parse(request.body);
       const appointment = await this.updateStatusUseCase.execute(id, status);
       await notifyAppointment(appointment.id, request.log);
+      return reply.send({ appointment });
+    } catch (error) {
+      return handleDomainError(reply, error);
+    }
+  }
+
+  async assignAppointmentBarber(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+    try {
+      const { id } = z.object({ id: z.string().min(1) }).parse(request.params);
+      const { barberId } = z.object({ barberId: z.string().min(1) }).parse(request.body);
+      const appointment = await this.assignBarber.execute(id, barberId);
       return reply.send({ appointment });
     } catch (error) {
       return handleDomainError(reply, error);

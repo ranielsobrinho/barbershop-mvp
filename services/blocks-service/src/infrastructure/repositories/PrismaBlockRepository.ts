@@ -3,7 +3,7 @@ import { Block } from '../../domain/entities/Block.js';
 import prisma from '../database/prisma.js';
 
 function toDomain(b: any): Block {
-  return new Block(b.id, new Date(b.startsAt), new Date(b.endsAt), b.reason, new Date(b.createdAt), new Date(b.updatedAt));
+  return new Block(b.id, new Date(b.startsAt), new Date(b.endsAt), b.reason, new Date(b.createdAt), new Date(b.updatedAt), b.barberId);
 }
 
 export class PrismaBlockRepository implements IBlockRepository {
@@ -22,7 +22,7 @@ export class PrismaBlockRepository implements IBlockRepository {
 
   async create(block: Block): Promise<Block> {
     const created = await prisma.block.create({
-      data: { id: block.id, startsAt: block.startsAt, endsAt: block.endsAt, reason: block.reason, createdAt: block.createdAt, updatedAt: block.updatedAt },
+      data: { id: block.id, barberId: block.barberId, startsAt: block.startsAt, endsAt: block.endsAt, reason: block.reason, createdAt: block.createdAt, updatedAt: block.updatedAt },
     });
     return toDomain(created);
   }

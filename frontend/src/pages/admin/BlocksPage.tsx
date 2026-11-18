@@ -7,6 +7,8 @@ import { DateInput } from '../../components/ui/DateInput';
 import { format, parseISO, monthString, MONTHS, addMonths, subMonths, toDateString, getBusinessCalendarDate } from '../../utils/date';
 import { formatDateInput, parseDateInput } from '../../utils/dateInput';
 import { useToast } from '../../contexts/ToastContext';
+import { useQuery } from '@tanstack/react-query';
+import { publicApi } from '../../services/publicApi';
 
 export function BlocksPage() {
   const { showToast } = useToast();
@@ -22,6 +24,8 @@ export function BlocksPage() {
   const [timeFrom, setTimeFrom] = useState('');
   const [timeTo, setTimeTo] = useState('');
   const [reason, setReason] = useState('');
+  const [barberId, setBarberId] = useState('');
+  const { data: barbers = [] } = useQuery({ queryKey: ['barbers'], queryFn: publicApi.getBarbers });
   const [error, setError] = useState<string | null>(null);
   const [affected, setAffected] = useState<any[] | null>(null);
 
@@ -77,7 +81,7 @@ export function BlocksPage() {
         startsAt = s.toISOString(); endsAt = e.toISOString();
       }
 
-      const result = await createBlock.mutateAsync({ startsAt, endsAt, reason: reason || undefined, confirmed });
+      const result = await createBlock.mutateAsync({ startsAt, endsAt, reason: reason || undefined, barberId: barberId || undefined, confirmed });
       if ((result as any).affectedAppointments?.length) {
         setAffected((result as any).affectedAppointments);
         showToast(`${(result as any).affectedAppointments.length} agendamento(s) serão afetados por este bloqueio.`, 'warning');
@@ -145,8 +149,9 @@ export function BlocksPage() {
                   <p className="font-medium text-gray-900 text-sm">
                     {fullDay
                       ? format(s, 'dd/MM/yyyy')
-                      : `${format(s, 'dd/MM/yyyy')} · ${format(s, 'HH:mm')}—${format(e, 'HH:mm')}`}
+                    : `${format(s, 'dd/MM/yyyy')} · ${format(s, 'HH:mm')}—${format(e, 'HH:mm')}`}
                   </p>
+                  <p className="text-xs text-gray-500">{b.barberId ? (barbers.find((barber) => barber.id === b.barberId)?.name || 'Barbeiro') : 'Toda a barbearia'}</p>
                   {b.reason && <p className="text-xs text-gray-500 truncate">{b.reason}</p>}
                 </div>
                 <button onClick={() => handleDelete(b.id)} disabled={deleteBlock.isPending}
@@ -202,6 +207,14 @@ export function BlocksPage() {
               </div>
             </div>
           )}
+
+          <div>
+            <label htmlFor="blk-barber" className="label">Aplicar bloqueio a</label>
+            <select id="blk-barber" className="input-field" value={barberId} onChange={(event) => setBarberId(event.target.value)}>
+              <option value="">Toda a barbearia</option>
+              {barbers.map((barber) => <option key={barber.id} value={barber.id}>{barber.name}</option>)}
+            </select>
+          </div>
 
           {mode === 'hours' && (
             <div className="grid grid-cols-2 gap-3">

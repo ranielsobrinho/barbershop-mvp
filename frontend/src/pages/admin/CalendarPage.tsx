@@ -61,7 +61,7 @@ export function CalendarPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-gray-900 truncate">{a.customerName}</p>
-                    <p className="text-sm text-gray-500 truncate">{a.service?.name} · {formatBusinessTime(a.startsAt)}</p>
+                    <p className="text-sm text-gray-500 truncate">{a.service?.name} · {a.barberName || 'Barbeiro'} · {formatBusinessTime(a.startsAt)}</p>
                   </div>
                 </button>
               );

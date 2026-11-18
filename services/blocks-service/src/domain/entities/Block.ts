@@ -5,12 +5,13 @@ export class Block {
     public readonly endsAt: Date,
     public readonly reason: string | null,
     public readonly createdAt: Date,
-    public readonly updatedAt: Date
+    public readonly updatedAt: Date,
+    public readonly barberId: string | null = null
   ) {}
 
-  static create(startsAt: Date, endsAt: Date, reason?: string): Block {
+  static create(startsAt: Date, endsAt: Date, reason?: string, barberId?: string): Block {
     const now = new Date();
-    return new Block(crypto.randomUUID(), startsAt, endsAt, reason?.trim() || null, now, now);
+    return new Block(crypto.randomUUID(), startsAt, endsAt, reason?.trim() || null, now, now, barberId || null);
   }
 
   get isFullDay(): boolean {

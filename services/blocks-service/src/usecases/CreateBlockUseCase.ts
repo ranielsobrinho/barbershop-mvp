@@ -7,6 +7,7 @@ export interface CreateBlockInput {
   startsAt: string;
   endsAt: string;
   reason?: string;
+  barberId?: string;
 }
 
 export class CreateBlockUseCase {
@@ -32,12 +33,12 @@ export class CreateBlockUseCase {
       throw new ValidationError('Data final deve ser posterior à data inicial');
     }
 
-    const block = Block.create(startsAt, endsAt, input.reason);
+    const block = Block.create(startsAt, endsAt, input.reason, input.barberId);
     const created = await this.blockRepo.create(block);
 
     const affected = options?.skipConflictCheck
       ? []
-      : await this.appointmentRepo.findByPeriod(startsAt, endsAt);
+      : await this.appointmentRepo.findByPeriod(startsAt, endsAt, input.barberId);
 
     return { block: created, affectedAppointments: affected };
   }

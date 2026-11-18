@@ -1,9 +1,12 @@
-import { api } from './api';
+import { api, SHOP_SLUG } from './api';
 import type { Service, Appointment } from './publicApi';
+import type { Barber } from './publicApi';
 export type { Service, Appointment };
+export type { Barber };
+export type AdminBarber = Barber & { active: boolean };
 
 export interface Block {
-  id: string; startsAt: string; endsAt: string; reason: string | null;
+  id: string; barberId: string | null; startsAt: string; endsAt: string; reason: string | null;
 }
 export interface BusinessHours {
   id: string; weekday: number; opensAt: string; closesAt: string;
@@ -125,6 +128,10 @@ export const adminApi = {
     const { data } = await api.patch(`/api/admin/appointments/${id}/status`, { status });
     return data.appointment;
   },
+  assignAppointmentBarber: async (id: string, barberId: string) => {
+    const { data } = await api.patch(`/api/admin/appointments/${id}/barber`, { barberId });
+    return data.appointment as Appointment;
+  },
   reschedule: async (id: string, newStartsAt: string) => {
     const { data } = await api.patch(`/api/admin/appointments/${id}/reschedule`, { newStartsAt });
     return data.appointment;
@@ -134,7 +141,7 @@ export const adminApi = {
     const { data } = await api.get('/api/admin/blocks', { params: month ? { month } : {} });
     return data.blocks;
   },
-  createBlock: async (payload: { startsAt: string; endsAt: string; reason?: string; confirmed?: boolean }) => {
+  createBlock: async (payload: { startsAt: string; endsAt: string; reason?: string; barberId?: string; confirmed?: boolean }) => {
     const { data } = await api.post('/api/admin/blocks', payload);
     return data;
   },
@@ -142,13 +149,26 @@ export const adminApi = {
     await api.delete(`/api/admin/blocks/${id}`);
   },
 
-  getBusinessHours: async (): Promise<BusinessHours[]> => {
-    const { data } = await api.get('/api/admin/business-hours');
+  getBusinessHours: async (barberId = 'barber_seu_carlos'): Promise<BusinessHours[]> => {
+    const { data } = await api.get('/api/admin/business-hours', { params: { barberId } });
     return data.hours;
   },
-  updateBusinessHours: async (hours: Partial<BusinessHours>[]) => {
-    const { data } = await api.put('/api/admin/business-hours', { hours });
+  updateBusinessHours: async (barberId: string, hours: Partial<BusinessHours>[]) => {
+    const { data } = await api.put('/api/admin/business-hours', { barberId, hours });
     return data.hours;
+  },
+
+  listBarbers: async (): Promise<AdminBarber[]> => {
+    const { data } = await api.get('/api/admin/barbers');
+    return data.barbers;
+  },
+  createBarber: async (name: string): Promise<AdminBarber> => {
+    const { data } = await api.post('/api/admin/barbers', { name });
+    return data.barber;
+  },
+  updateBarber: async (id: string, payload: { name?: string; active?: boolean }): Promise<AdminBarber> => {
+    const { data } = await api.patch(`/api/admin/barbers/${id}`, payload);
+    return data.barber;
   },
 
   getSettings: async (): Promise<Settings> => {
@@ -188,7 +208,10 @@ export const adminApi = {
     const token = localStorage.getItem('auth_token');
     const response = await fetch(`${api.defaults.baseURL || ''}/api/admin/customers/${encodeURIComponent(id)}/export`, {
       credentials: 'include',
-      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      headers: {
+        'X-Shop-Slug': SHOP_SLUG,
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
     });
     if (!response.ok || !response.body) throw new Error('Não foi possível exportar o CSV.');
 

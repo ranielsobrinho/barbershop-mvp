@@ -11,7 +11,7 @@ export function useBlocks(month?: string) {
 export function useCreateBlock() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (payload: { startsAt: string; endsAt: string; reason?: string; confirmed?: boolean }) =>
+    mutationFn: (payload: { startsAt: string; endsAt: string; reason?: string; barberId?: string; confirmed?: boolean }) =>
       adminApi.createBlock(payload),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['blocks'] }),
   });

@@ -2,9 +2,9 @@ import { IAppointmentRepository, AffectedAppointment } from '../../domain/reposi
 import prisma from '../database/prisma.js';
 
 export class PrismaAppointmentRepository implements IAppointmentRepository {
-  async findByPeriod(start: Date, end: Date): Promise<AffectedAppointment[]> {
+  async findByPeriod(start: Date, end: Date, barberId?: string): Promise<AffectedAppointment[]> {
     const list = await prisma.appointment.findMany({
-      where: { startsAt: { lt: end }, endsAt: { gt: start }, status: { not: 'CANCELADO' } },
+      where: { startsAt: { lt: end }, endsAt: { gt: start }, status: { not: 'CANCELADO' }, ...(barberId ? { barberId } : {}) },
       orderBy: { startsAt: 'asc' },
     });
     return list.map(a => ({

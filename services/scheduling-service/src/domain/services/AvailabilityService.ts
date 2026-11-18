@@ -35,7 +35,7 @@ export class AvailabilityService {
    * sem sobreposição com agendamentos que ocupam horário.
    * Filtra slots que violam minNoticeHours (hoje) e maxDaysAhead (futuro).
    */
-  async getAvailableSlots(date: Date, serviceSlotMin: number): Promise<AvailableSlot[]> {
+  async getAvailableSlots(date: Date, serviceSlotMin: number, barberId = 'barber_seu_carlos'): Promise<AvailableSlot[]> {
     const settings = await this.settingsRepo.get();
     const now = new Date();
     
@@ -47,14 +47,14 @@ export class AvailabilityService {
 
     const day = this.calendarDay(date);
     const weekday = new Date(Date.UTC(day.y, day.mo, day.d)).getUTCDay();
-    const businessHours = await this.businessHoursRepo.findByWeekday(weekday);
+    const businessHours = await this.businessHoursRepo.findByWeekday(weekday, barberId);
     if (!businessHours || !businessHours.active) return [];
 
     const dayStart = this.wallToInstant(day, 0);
     const dayEnd = this.wallToInstant(day, 24 * 60 - 1);
 
-    const blocks = await this.blockRepo.findByPeriod(dayStart, dayEnd);
-    const appointments = await this.appointmentRepo.findByPeriod(dayStart, dayEnd);
+    const blocks = await this.blockRepo.findByPeriod(dayStart, dayEnd, barberId);
+    const appointments = await this.appointmentRepo.findByPeriod(dayStart, dayEnd, false, barberId);
     const occupying = appointments.filter(a => OCCUPYING_STATUSES.includes(a.status));
 
     const rawSlots = this.generator.generate(businessHours, serviceSlotMin);
@@ -90,12 +90,12 @@ export class AvailabilityService {
    * expediente ativo, dentro da abertura/fechamento, sem cruzar almoço,
    * sem tocar em bloqueio e sem sobrepor agendamento que ocupa.
    */
-  async assertBookable(startsAt: Date, endsAt: Date, excludeId?: string, slotMin?: number): Promise<void> {
+  async assertBookable(startsAt: Date, endsAt: Date, excludeId?: string, slotMin?: number, barberId = 'barber_seu_carlos'): Promise<void> {
     const wall = toZonedTime(startsAt, this.timezone);
     const endWall = toZonedTime(endsAt, this.timezone);
 
     const weekday = wall.getDay();
-    const businessHours = await this.businessHoursRepo.findByWeekday(weekday);
+    const businessHours = await this.businessHoursRepo.findByWeekday(weekday, barberId);
     if (!businessHours || !businessHours.active) {
       throw new SlotUnavailableError('Dia não disponível para agendamento');
     }
@@ -125,21 +125,21 @@ export class AvailabilityService {
       }
     }
 
-    const blocks = await this.blockRepo.findConflicting(startsAt, endsAt);
+    const blocks = await this.blockRepo.findConflicting(startsAt, endsAt, barberId);
     if (blocks.length > 0) {
       throw new SlotUnavailableError('Horário bloqueado');
     }
 
-    const conflicts = await this.appointmentRepo.findConflicting(startsAt, endsAt, excludeId);
+    const conflicts = await this.appointmentRepo.findConflicting(startsAt, endsAt, excludeId, barberId);
     if (conflicts.some(a => OCCUPYING_STATUSES.includes(a.status))) {
       throw new ConflictError();
     }
   }
 
   /** true se o horário pode ser gravado (expediente + bloqueios + conflitos). */
-  async isSlotFree(startsAt: Date, endsAt: Date, excludeId?: string, slotMin?: number): Promise<boolean> {
+  async isSlotFree(startsAt: Date, endsAt: Date, excludeId?: string, slotMin?: number, barberId = 'barber_seu_carlos'): Promise<boolean> {
     try {
-      await this.assertBookable(startsAt, endsAt, excludeId, slotMin);
+      await this.assertBookable(startsAt, endsAt, excludeId, slotMin, barberId);
       return true;
     } catch {
       return false;

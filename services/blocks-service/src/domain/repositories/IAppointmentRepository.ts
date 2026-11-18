@@ -7,5 +7,5 @@ export interface AffectedAppointment {
 }
 
 export interface IAppointmentRepository {
-  findByPeriod(start: Date, end: Date): Promise<AffectedAppointment[]>;
+  findByPeriod(start: Date, end: Date, barberId?: string): Promise<AffectedAppointment[]>;
 }

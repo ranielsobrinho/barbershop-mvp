@@ -16,7 +16,9 @@ export class Appointment {
     public readonly status: AppointmentStatus,
     public readonly previousStartsAt: Date | null,
     public readonly createdAt: Date,
-    public readonly updatedAt: Date
+    public readonly updatedAt: Date,
+    public readonly barberId = 'barber_seu_carlos',
+    public readonly barberName: string | null = null
   ) {}
 
   static create(
@@ -26,7 +28,8 @@ export class Appointment {
     startsAt: Date,
     endsAt: Date,
     priceCents: number,
-    status: AppointmentStatus = 'AGUARDANDO_CONFIRMACAO'
+    status: AppointmentStatus = 'AGUARDANDO_CONFIRMACAO',
+    barberId = 'barber_seu_carlos'
   ): Appointment {
     const now = new Date();
     return new Appointment(
@@ -40,7 +43,8 @@ export class Appointment {
       status,
       null,
       now,
-      now
+      now,
+      barberId
     );
   }
 
@@ -49,7 +53,7 @@ export class Appointment {
       this.id, this.serviceId, this.customerName, this.customerPhone,
       this.startsAt, this.endsAt, this.priceCents,
       'CONFIRMADO', this.previousStartsAt,
-      this.createdAt, new Date()
+      this.createdAt, new Date(), this.barberId, this.barberName
     );
   }
 
@@ -58,7 +62,7 @@ export class Appointment {
       this.id, this.serviceId, this.customerName, this.customerPhone,
       this.startsAt, this.endsAt, this.priceCents,
       'CANCELADO', this.previousStartsAt,
-      this.createdAt, new Date()
+      this.createdAt, new Date(), this.barberId, this.barberName
     );
   }
 
@@ -67,7 +71,7 @@ export class Appointment {
       this.id, this.serviceId, this.customerName, this.customerPhone,
       newStartsAt, newEndsAt, this.priceCents,
       'REAGENDADO', this.startsAt,
-      this.createdAt, new Date()
+      this.createdAt, new Date(), this.barberId, this.barberName
     );
   }
 

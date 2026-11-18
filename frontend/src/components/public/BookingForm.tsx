@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useLayoutEffect } from 'react';
+import { useState, useMemo, useRef, useLayoutEffect, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -37,6 +37,7 @@ interface PendingCursor {
 export function BookingForm({ onConfirmed }: Props) {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [serviceId, setServiceId] = useState<string | null>(null);
+  const [barberId, setBarberId] = useState<string | null>('barber_seu_carlos');
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -64,6 +65,11 @@ export function BookingForm({ onConfirmed }: Props) {
   const [currentMonth, setCurrentMonth] = useState(() => new Date());
   const monthStr = monthString(currentMonth);
   const { data: blockedDates = [] } = useBlockedDates(monthStr);
+  const { data: barbers = [] } = useQuery({ queryKey: ['barbers'], queryFn: publicApi.getBarbers });
+
+  useEffect(() => {
+    if (barbers.length && !barbers.some((barber) => barber.id === barberId)) setBarberId(barbers[0].id);
+  }, [barbers, barberId]);
 
   const dateStr = selectedDate ? toDateString(selectedDate) : null;
   const {
@@ -71,7 +77,7 @@ export function BookingForm({ onConfirmed }: Props) {
     isLoading: slotsLoading,
     isError: slotsError,
     refetch: reloadSlots,
-  } = useAvailability(dateStr, serviceId);
+  } = useAvailability(dateStr, serviceId, barberId);
 
   const selectedService = services?.find(s => s.id === serviceId) || null;
 
@@ -163,7 +169,7 @@ export function BookingForm({ onConfirmed }: Props) {
   }, [phoneValue]); // Re-executa quando phoneValue muda (após setValue)
 
   const onSubmit = async (data: BookingForm) => {
-    if (!serviceId || !selectedDate || !selectedTime) return;
+    if (!serviceId || !barberId || !selectedDate || !selectedTime) return;
     setSubmitting(true);
     setSubmitError(null);
 
@@ -174,6 +180,7 @@ export function BookingForm({ onConfirmed }: Props) {
 
       const appointment = await publicApi.createAppointment({
         serviceId,
+        barberId,
         customerName: data.customerName,
         customerPhone: data.customerPhone,
         startsAt: startsAt.toISOString(),
@@ -222,7 +229,17 @@ export function BookingForm({ onConfirmed }: Props) {
       {/* Etapa 1: Serviço */}
       {step === 1 && (
         <div>
-          <ServicesList services={services || []} selectedId={serviceId ?? undefined} onSelect={(id) => { setServiceId(id); setStep(2); }} selectable />
+          <ServicesList services={services || []} selectedId={serviceId ?? undefined} onSelect={setServiceId} selectable />
+          <h4 className="font-semibold text-gray-900 mt-5 mb-2">Escolha o barbeiro</h4>
+          <div className="grid grid-cols-2 gap-2">
+            {barbers.map((barber) => (
+              <button key={barber.id} type="button" onClick={() => setBarberId(barber.id)}
+                className={`rounded-lg border px-3 py-2 text-sm ${barberId === barber.id ? 'border-primary-600 bg-primary-50 text-primary-800' : 'border-gray-200'}`}>
+                {barber.name}
+              </button>
+            ))}
+          </div>
+          <button type="button" disabled={!serviceId || !barberId} onClick={() => setStep(2)} className="btn-primary mt-4 w-full">Continuar</button>
         </div>
       )}
 
@@ -314,7 +331,7 @@ export function BookingForm({ onConfirmed }: Props) {
           {/* Resumo */}
           {selectedService && selectedDate && selectedTime && (
             <div className="bg-primary-50 border border-primary-100 rounded-xl p-4 mb-4 text-sm">
-              <p className="font-semibold text-primary-900">{selectedService.name}</p>
+              <p className="font-semibold text-primary-900">{selectedService.name} · {barbers.find((b) => b.id === barberId)?.name}</p>
               <p className="text-primary-700">{format(selectedDate, "dd 'de' MMMM 'de' yyyy")}</p>
               <p className="text-primary-700">Às {selectedTime} · {selectedService.slotMin} min</p>
               <p className="text-lg font-bold text-primary-900 mt-1">{formatMoney(selectedService.priceCents)}</p>

@@ -6,6 +6,6 @@ export interface BlockSnapshot {
 }
 
 export interface IBlockRepository {
-  findByPeriod(start: Date, end: Date): Promise<BlockSnapshot[]>;
-  findConflicting(startsAt: Date, endsAt: Date): Promise<BlockSnapshot[]>;
+  findByPeriod(start: Date, end: Date, barberId?: string | null): Promise<BlockSnapshot[]>;
+  findConflicting(startsAt: Date, endsAt: Date, barberId?: string): Promise<BlockSnapshot[]>;
 }

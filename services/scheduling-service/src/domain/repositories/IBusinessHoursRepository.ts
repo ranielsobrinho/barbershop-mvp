@@ -8,6 +8,6 @@ export interface BusinessHoursSnapshot {
 }
 
 export interface IBusinessHoursRepository {
-  findByWeekday(weekday: number): Promise<BusinessHoursSnapshot | null>;
+  findByWeekday(weekday: number, barberId?: string): Promise<BusinessHoursSnapshot | null>;
   findAll(): Promise<BusinessHoursSnapshot[]>;
 }

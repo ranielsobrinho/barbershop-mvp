@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useServices } from '../../hooks/useServices';
 import { useAvailability } from '../../hooks/useAvailability';
 import { publicApi } from '../../services/publicApi';
@@ -16,11 +17,16 @@ interface Props {
 
 export function CustomerRebookingModal({ customer, initialServiceId, onClose }: Props) {
   const [serviceId, setServiceId] = useState(initialServiceId ?? '');
+  const [barberId, setBarberId] = useState('barber_seu_carlos');
   const [date, setDate] = useState(() => toDateString(getBusinessCalendarDate(new Date())));
   const [time, setTime] = useState('');
   const [saving, setSaving] = useState(false);
   const { data: services = [], isLoading: loadingServices } = useServices();
-  const availability = useAvailability(date, serviceId || null);
+  const { data: barbers = [] } = useQuery({ queryKey: ['barbers'], queryFn: publicApi.getBarbers });
+  useEffect(() => {
+    if (barbers.length && !barbers.some((barber) => barber.id === barberId)) setBarberId(barbers[0].id);
+  }, [barbers, barberId]);
+  const availability = useAvailability(date, serviceId || null, barberId);
   const queryClient = useQueryClient();
   const { showToast } = useToast();
 
@@ -30,6 +36,7 @@ export function CustomerRebookingModal({ customer, initialServiceId, onClose }: 
     try {
       await publicApi.createAppointment({
         serviceId,
+        barberId,
         customerName: customer.name,
         customerPhone: customer.phone,
         startsAt: new Date(`${date}T${time}:00-03:00`).toISOString(),
@@ -74,6 +81,12 @@ export function CustomerRebookingModal({ customer, initialServiceId, onClose }: 
             <div>
               <label htmlFor="rebooking-date" className="label">Data</label>
               <input id="rebooking-date" type="date" className="input-field" min={toDateString(getBusinessCalendarDate(new Date()))} value={date} onChange={(event) => { setDate(event.target.value); setTime(''); }} />
+            </div>
+            <div>
+              <label htmlFor="rebooking-barber" className="label">Barbeiro</label>
+              <select id="rebooking-barber" className="input-field" value={barberId} onChange={(event) => { setBarberId(event.target.value); setTime(''); }}>
+                {barbers.map((barber) => <option key={barber.id} value={barber.id}>{barber.name}</option>)}
+              </select>
             </div>
             <div>
               <span className="label">Horário disponível</span>

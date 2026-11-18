@@ -26,6 +26,10 @@ export function ConfirmationPage({ appointment, onNew }: Props) {
             <span className="font-semibold text-gray-900">{appointment.service?.name || 'Serviço'}</span>
           </div>
           <div className="flex justify-between">
+            <span className="text-gray-500">Barbeiro</span>
+            <span className="font-semibold text-gray-900">{appointment.barberName || 'A confirmar'}</span>
+          </div>
+          <div className="flex justify-between">
             <span className="text-gray-500">Data</span>
             <span className="font-semibold text-gray-900">{formatFullDate(appointment.startsAt)}</span>
           </div>

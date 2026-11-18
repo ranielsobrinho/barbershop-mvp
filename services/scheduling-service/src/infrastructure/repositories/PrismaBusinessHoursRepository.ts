@@ -2,8 +2,10 @@ import { IBusinessHoursRepository, BusinessHoursSnapshot } from '../../domain/re
 import prisma from '../database/prisma.js';
 
 export class PrismaBusinessHoursRepository implements IBusinessHoursRepository {
-  async findByWeekday(weekday: number): Promise<BusinessHoursSnapshot | null> {
-    const bh = await prisma.businessHours.findUnique({ where: { weekday } });
+  async findByWeekday(weekday: number, barberId = 'barber_seu_carlos'): Promise<BusinessHoursSnapshot | null> {
+    const bh = await prisma.barberBusinessHours.findUnique({
+      where: { barberId_weekday: { barberId, weekday } },
+    });
     if (!bh) return null;
     return {
       weekday: bh.weekday, opensAt: bh.opensAt, closesAt: bh.closesAt,

@@ -3,17 +3,18 @@ import { Appointment, AppointmentStatus } from '../../domain/entities/Appointmen
 import { OCCUPYING_STATUSES } from '../../domain/value-objects/AppointmentStatus.js';
 import { getBusinessMonthUtcRange } from '../../domain/services/BusinessMonthRange.js';
 import prisma from '../database/prisma.js';
+import { getTenantContext } from '@barbershop/tenant-context';
 
 function toDomain(a: any): Appointment {
   return new Appointment(
     a.id, a.serviceId, a.customerName, a.customerPhone,
     new Date(a.startsAt), new Date(a.endsAt), a.priceCents,
     a.status, a.previousStartsAt ? new Date(a.previousStartsAt) : null,
-    new Date(a.createdAt), new Date(a.updatedAt)
+    new Date(a.createdAt), new Date(a.updatedAt), a.barberId, a.barber?.name ?? null
   );
 }
 
-// Single-shop MVP: serialize every schedule mutation so overlapping intervals
+// Serialize schedule mutations per tenant-owned barber so overlapping intervals
 // with different start times cannot pass the conflict check concurrently.
 const SCHEDULE_LOCK_NAMESPACE = 910721;
 const SCHEDULE_LOCK_KEY = 1;
@@ -22,24 +23,26 @@ export class PrismaAppointmentRepository implements IAppointmentRepository, IApp
   async findByPhone(phone: string): Promise<Array<{ appointment: Appointment; serviceName: string }>> {
     const appointments = await prisma.appointment.findMany({
       where: { customerPhone: phone },
-      include: { service: { select: { name: true } } },
+      include: { service: { select: { name: true } }, barber: { select: { name: true } } },
       orderBy: { startsAt: 'desc' },
     });
     return appointments.map((row) => ({ appointment: toDomain(row), serviceName: row.service.name }));
   }
 
   async findById(id: string): Promise<Appointment | null> {
-    const a = await prisma.appointment.findUnique({ where: { id } });
+    const a = await prisma.appointment.findUnique({ where: { id }, include: { barber: { select: { name: true } } } });
     return a ? toDomain(a) : null;
   }
 
-  async findByPeriod(start: Date, end: Date, includeCancelled = false): Promise<Appointment[]> {
+  async findByPeriod(start: Date, end: Date, includeCancelled = false, barberId?: string): Promise<Appointment[]> {
     const list = await prisma.appointment.findMany({
       where: {
         startsAt: { lt: end },
         endsAt: { gt: start },
+        ...(barberId ? { barberId } : {}),
         ...(includeCancelled ? {} : { status: { not: 'CANCELADO' } }),
       },
+      include: { barber: { select: { name: true } } },
       orderBy: { startsAt: 'asc' },
     });
     return list.map(toDomain);
@@ -51,17 +54,18 @@ export class PrismaAppointmentRepository implements IAppointmentRepository, IApp
       where: {
         startsAt: { gte: start, lt: end },
       },
-      include: { service: true },
+      include: { service: true, barber: { select: { name: true } } },
       orderBy: { startsAt: 'asc' },
     });
     return list.map(toDomain);
   }
 
-  async findConflicting(startsAt: Date, endsAt: Date, excludeId?: string): Promise<Appointment[]> {
+  async findConflicting(startsAt: Date, endsAt: Date, excludeId?: string, barberId?: string): Promise<Appointment[]> {
     const list = await prisma.appointment.findMany({
       where: {
         startsAt: { lt: endsAt },
         endsAt: { gt: startsAt },
+        ...(barberId ? { barberId } : {}),
         status: { in: OCCUPYING_STATUSES as any },
         ...(excludeId ? { id: { not: excludeId } } : {}),
       },
@@ -72,7 +76,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository, IApp
   async create(appointment: Appointment): Promise<Appointment> {
     const created = await prisma.$transaction(async (tx) => {
       const customer = await tx.customer.upsert({
-        where: { phone: appointment.customerPhone },
+        where: { tenantId_phone: { tenantId: getTenantContext()?.tenantId || 'tenant_seu_carlos', phone: appointment.customerPhone } },
         update: { name: appointment.customerName },
         create: { name: appointment.customerName, phone: appointment.customerPhone },
         select: { id: true },
@@ -82,6 +86,7 @@ export class PrismaAppointmentRepository implements IAppointmentRepository, IApp
           id: appointment.id,
           customerId: customer.id,
           serviceId: appointment.serviceId,
+          barberId: appointment.barberId,
           customerName: appointment.customerName,
           customerPhone: appointment.customerPhone,
           startsAt: appointment.startsAt,
@@ -123,14 +128,14 @@ export class PrismaAppointmentRepository implements IAppointmentRepository, IApp
     });
   }
 
-  async withSlotLock<T>(_startsAt: Date, callback: (tx: any) => Promise<T>): Promise<T> {
+  async withSlotLock<T>(_startsAt: Date, callback: (tx: any) => Promise<T>, barberId = 'barber_seu_carlos'): Promise<T> {
     return prisma.$transaction(async (tx) => {
       // The lock must cover the whole schedule, not an exact start timestamp:
       // different service durations can produce overlapping intervals.
       await tx.$queryRawUnsafe(
-        'SELECT pg_advisory_xact_lock($1::integer, $2::integer) IS NULL',
+        'SELECT pg_advisory_xact_lock($1::integer, hashtext($2::text)) IS NULL',
         SCHEDULE_LOCK_NAMESPACE,
-        SCHEDULE_LOCK_KEY,
+        barberId,
       );
       return callback(tx);
     });

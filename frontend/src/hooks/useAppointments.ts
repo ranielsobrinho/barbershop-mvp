@@ -17,6 +17,14 @@ export function useUpdateStatus() {
   });
 }
 
+export function useAssignAppointmentBarber() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, barberId }: { id: string; barberId: string }) => adminApi.assignAppointmentBarber(id, barberId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['appointments'] }),
+  });
+}
+
 export function useReschedule() {
   const qc = useQueryClient();
   return useMutation({

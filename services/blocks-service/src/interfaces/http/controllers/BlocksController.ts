@@ -9,6 +9,7 @@ const createSchema = z.object({
   startsAt: z.string().min(1),
   endsAt: z.string().min(1),
   reason: z.string().max(200).optional(),
+  barberId: z.string().min(1).optional(),
   confirmed: z.boolean().optional(), // cliente confirmou cancelar agendamentos afetados
 });
 

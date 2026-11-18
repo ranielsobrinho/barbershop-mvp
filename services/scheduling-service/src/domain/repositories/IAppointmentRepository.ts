@@ -2,9 +2,9 @@ import { Appointment, AppointmentStatus } from '../entities/Appointment.js';
 
 export interface IAppointmentRepository {
   findById(id: string): Promise<Appointment | null>;
-  findByPeriod(start: Date, end: Date, includeCancelled?: boolean): Promise<Appointment[]>;
+  findByPeriod(start: Date, end: Date, includeCancelled?: boolean, barberId?: string): Promise<Appointment[]>;
   findByMonth(year: number, month: number): Promise<Appointment[]>;
-  findConflicting(startsAt: Date, endsAt: Date, excludeId?: string): Promise<Appointment[]>;
+  findConflicting(startsAt: Date, endsAt: Date, excludeId?: string, barberId?: string): Promise<Appointment[]>;
   create(appointment: Appointment): Promise<Appointment>;
   update(appointment: Appointment): Promise<Appointment>;
   countByPhone(phone: string, since: Date): Promise<number>;
@@ -15,7 +15,7 @@ export interface IAppointmentRepository {
    * have different start times or service durations.
    * The callback receives a Prisma transaction client.
    */
-  withSlotLock<T>(startsAt: Date, callback: (tx: any) => Promise<T>): Promise<T>;
+  withSlotLock<T>(startsAt: Date, callback: (tx: any) => Promise<T>, barberId?: string): Promise<T>;
 }
 
 export interface IAppointmentLookupRepository {
